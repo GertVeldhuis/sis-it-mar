@@ -1028,24 +1028,16 @@ function laad() {
     // Verwijder 2026010 Holding €968 (foutieve factuur)
     facturen = facturen.filter(f => f.nummer !== '2026010');
 
-    // 2026011 terugzetten naar concept (was foutief verstuurd)
-    const f2026011 = facturen.find(f => f.nummer === '2026011');
-    if(f2026011 && f2026011.status === 'verstuurd') {
-      f2026011.status = 'concept';
-      f2026011.nummer = 'concept';
+    // 2026011 - laat staan zoals het is
+
+    // Verwijder duplicate Holding Q1 concepten, houd alleen degene met hoogste totaal
+    const holdingQ1 = facturen.filter(f => f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept');
+    if(holdingQ1.length > 1) {
+      holdingQ1.sort((a,b) => b.totaal - a.totaal);
+      const houdId = holdingQ1[0].id;
+      facturen = facturen.filter(f => !(f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept' && f.id !== houdId));
       gereset = true;
     }
-
-    // Verwijder ALLE Holding concepten op 20-04-2026 met totaal != 1052.70
-    // (duplicaten en oude €762,30 versies)
-    const voor = facturen.length;
-    facturen = facturen.filter(f => {
-      if(f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept') {
-        return Math.round(f.totaal * 100) === 105270; // houd alleen €1052,70
-      }
-      return true;
-    });
-    if(facturen.length !== voor) gereset = true;
 
     // Verwijder duplicate concept-facturen (zelfde klant + datum)
     const gezien = new Set();
