@@ -1870,14 +1870,13 @@ function openMailModal(fid) {
 
   const volleTekst = (k.aanhef ? k.aanhef+'\n\n' : '') + tekst + '\n\n-- \nvr gr Gert Veldhuis';
 
+  const bccAdres = instellingen.bcc || document.getElementById('set-bcc')?.value || '6y6b@inkoop.exactonline.nl';
+
   document.getElementById('mail-body').innerHTML = `
     <div class="form-row"><label>Aan</label><input type="email" id="mail-aan" value="${k.email}"></div>
-    <div class="form-row"><label>BCC</label><input type="email" id="mail-bcc" value="${instellingen.bcc}"></div>
+    <div class="form-row"><label>BCC</label><input type="email" id="mail-bcc" value="${bccAdres}"></div>
     <div class="form-row"><label>Onderwerp</label><input type="text" id="mail-onderwerp" value="${onderwerp}"></div>
-    <div class="form-row"><label>Begeleidende tekst</label><textarea id="mail-tekst" rows="6">${volleTekst}</textarea></div>
-    <div class="card" style="background:var(--bg);font-size:12.5px;margin-top:0.5rem">
-      <strong>Let op:</strong> Voeg de factuur handmatig toe als bijlage. Print de factuur eerst via 👁 Bekijken → 🖨 Afdrukken naar PDF.
-    </div>`;
+    <div class="form-row"><label>Begeleidende tekst</label><textarea id="mail-tekst" rows="7">${volleTekst}</textarea></div>`;
 
   document.getElementById('mail-verstuur-btn').onclick = () => {
     const aan = document.getElementById('mail-aan').value;
