@@ -631,6 +631,12 @@ tr:hover td { background: var(--bg); }
       Geen databestand gekoppeld — wijzigingen worden alleen lokaal opgeslagen.
     </div>
     <p class="text-sm text-muted mt-1">Koppel je JSON-bestand in iCloud Drive voor automatisch opslaan en laden.</p>
+    <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+      <button class="btn btn-sm" onclick="voegMissendeFacturenToe()" style="font-size:12.5px">
+        🔧 Herstel ontbrekende facturen
+      </button>
+      <span class="text-sm text-muted" style="margin-left:8px">Voegt 2026011 toe als die ontbreekt</span>
+    </div>
   </div>
 </div>
 
@@ -2172,6 +2178,32 @@ function verwijderKlant(id) {
 // ════════════════════════════════════════════════
 // INSTELLINGEN
 // ════════════════════════════════════════════════
+function voegMissendeFacturenToe() {
+  let toegevoegd = 0;
+  if(!facturen.find(f => f.nummer === '2026011')) {
+    facturen.push({
+      id: uid(), nummer: '2026011', klantId: 'k3',
+      factuurdatum: '2026-04-20', vervaldatum: '2026-05-04', opmerking: '',
+      regels: [
+        {omschrijving: 'Gemaakte uren Q1 2026', bedrag: 70, aantal: 9, subtotaal: 630, btw: 21},
+        {omschrijving: 'Reiskosten Q1 2026', bedrag: 0.25, aantal: 120, subtotaal: 30, btw: 21},
+        {omschrijving: 'Opnemen meterstanden, melding lekkage en regelen airco', bedrag: 70, aantal: 3, subtotaal: 210, btw: 21}
+      ],
+      subtotaal: 870, btwGroepen: {'21': 870}, btwBedrag: 182.70, totaal: 1052.70,
+      status: 'verstuurd', aangemaakt: '2026-04-20T00:00:00Z'
+    });
+    toegevoegd++;
+  }
+  if(toegevoegd) {
+    sla();
+    renderFacturen();
+    renderDashboard();
+    toast('✓ ' + toegevoegd + ' factuur toegevoegd');
+  } else {
+    toast('Geen ontbrekende facturen gevonden');
+  }
+}
+
 function renderInstellingen() {
   const statusEl = document.getElementById('bestand-status');
   if(statusEl) {
