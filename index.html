@@ -2833,6 +2833,9 @@ async function init() {
       if(ok) {
         renderDashboard();
         toast('✓ Data geladen uit cloud');
+        setTimeout(() => {
+          if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
+        }, 3000);
       } else {
         document.getElementById('welkom-scherm').style.display = 'flex';
         document.getElementById('hoofd-app').style.display = 'none';
