@@ -2812,6 +2812,10 @@ async function init() {
     laadVanCloud().then(ok => { if(ok) { renderDashboard(); } });
     // Dagelijkse backup
     setTimeout(() => maakBackup(), 3000);
+    // Seintje als backup-map niet gekoppeld is
+    setTimeout(() => {
+      if(!backupDirHandle) toast('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
+    }, 4000);
   } else {
     // Probeer cloud te laden
     document.getElementById('welkom-scherm').style.display = 'none';
