@@ -1884,7 +1884,9 @@ function openMailModal(fid) {
     const bcc = document.getElementById('mail-bcc').value;
     const sub = encodeURIComponent(document.getElementById('mail-onderwerp').value);
     const body = encodeURIComponent(document.getElementById('mail-tekst').value);
-    window.location.href = `mailto:${aan}?bcc=${bcc}&subject=${sub}&body=${body}`;
+    // Gmail compose link
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(aan)}&bcc=${encodeURIComponent(bcc)}&su=${sub}&body=${body}`;
+    window.open(gmailUrl, '_blank');
   };
 
   openModal('modal-mail');
