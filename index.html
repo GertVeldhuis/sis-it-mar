@@ -321,26 +321,18 @@ tr:hover td { background: var(--bg); }
 @media print {
   @page { size: A4; margin: 15mm 18mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
   body, html { background: white !important; }
-  #nav, .no-print, .modal-footer, .modal-header .btn,
-  .nav-btn, #iphone-badge { display: none !important; }
-
-  /* Verberg alles behalve de factuurpreview */
-  body > *:not(.modal-overlay) { display: none !important; }
-  .modal-overlay { display: block !important; position: static !important;
-    background: none !important; padding: 0 !important; }
-  .modal { box-shadow: none !important; border: none !important;
-    padding: 0 !important; max-width: 100% !important;
-    width: 100% !important; max-height: none !important; overflow: visible !important; }
-  .modal-header { display: none !important; }
-  .modal-footer { display: none !important; }
-
+  body > *:not(#print-container) { display: none !important; }
+  #print-container {
+    display: block !important;
+    width: 100% !important;
+  }
   .factuur-preview {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     border: none !important;
+    box-shadow: none !important;
     font-size: 11pt !important;
     line-height: 1.5 !important;
   }
@@ -377,6 +369,7 @@ tr:hover td { background: var(--bg); }
 <body>
 
 <!-- NAV -->
+<div id="print-container" style="display:none"></div>
 <div id="welkom-scherm" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
   <div style="font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent)">Sis it Mar</div>
   <div id="welkom-titel" style="font-size:18px;font-weight:500">Welkom</div>
