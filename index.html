@@ -1025,6 +1025,9 @@ function laad() {
     });
     let gereset = false;
 
+    // Verwijder 2026010 Holding €968 (foutieve factuur)
+    facturen = facturen.filter(f => f.nummer !== '2026010');
+
     // 2026011 terugzetten naar concept (was foutief verstuurd)
     const f2026011 = facturen.find(f => f.nummer === '2026011');
     if(f2026011 && f2026011.status === 'verstuurd') {
