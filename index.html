@@ -624,6 +624,7 @@ tr:hover td { background: var(--bg); }
         <input type="file" accept=".json" style="display:none" onchange="importData(this)">
       </label>
       <button class="btn btn-primary" onclick="koppelBestand()">📂 Koppel databestand</button>
+      <button class="btn" onclick="laadEnSync()">☁️ Sync met cloud</button>
     </div>
     <div id="bestand-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
       Geen databestand gekoppeld — wijzigingen worden alleen lokaal opgeslagen.
@@ -784,6 +785,8 @@ let fileHandle = null;
 let saveTimeout = null;
 const DB_NAME = 'SisItMarDB';
 const STORE_NAME = 'handles';
+const WORKER_URL = 'https://sis-it-mar-sync.gert-c5c.workers.dev';
+let syncTimeout = null;
 
 const DEFAULTS = {
   klanten: [
@@ -1194,6 +1197,34 @@ function sla() {
   localStorage.setItem('sim_facturen', JSON.stringify(facturen));
   localStorage.setItem('sim_instellingen', JSON.stringify(instellingen));
   schrijfNaarBestand();
+  syncNaarCloud();
+}
+
+function syncNaarCloud() {
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    try {
+      const data = JSON.stringify({ klanten, regels, facturen, instellingen });
+      await fetch(WORKER_URL + '/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: data
+      });
+    } catch(e) { console.warn('Cloud sync fout:', e); }
+  }, 1000);
+}
+
+async function laadVanCloud() {
+  try {
+    const resp = await fetch(WORKER_URL + '/data');
+    const data = await resp.json();
+    if(data && data.klanten) {
+      verwerkData(data);
+      sla();
+      return true;
+    }
+  } catch(e) { console.warn('Cloud laad fout:', e); }
+  return false;
 }
 
 // ════════════════════════════════════════════════
@@ -2173,6 +2204,18 @@ function verwijderKlant(id) {
 // ════════════════════════════════════════════════
 // INSTELLINGEN
 // ════════════════════════════════════════════════
+async function laadEnSync() {
+  toast('Bezig met laden uit cloud...');
+  const ok = await laadVanCloud();
+  if(ok) {
+    renderDashboard();
+    renderFacturen && renderFacturen();
+    toast('✓ Data geladen uit cloud');
+  } else {
+    toast('Geen cloud data gevonden');
+  }
+}
+
 function voegMissendeFacturenToe() {
   let toegevoegd = 0;
   if(!facturen.find(f => f.nummer === '2026011')) {
@@ -2520,9 +2563,22 @@ async function init() {
     document.getElementById('welkom-scherm').style.display = 'none';
     document.getElementById('hoofd-app').style.display = 'block';
     renderDashboard();
+    // Probeer op achtergrond cloud te laden (nieuwere data)
+    laadVanCloud().then(ok => { if(ok) { renderDashboard(); } });
   } else {
-    document.getElementById('welkom-scherm').style.display = 'flex';
-    document.getElementById('hoofd-app').style.display = 'none';
+    // Probeer cloud te laden
+    document.getElementById('welkom-scherm').style.display = 'none';
+    document.getElementById('hoofd-app').style.display = 'block';
+    toast('Data laden uit cloud...');
+    laadVanCloud().then(ok => {
+      if(ok) {
+        renderDashboard();
+        toast('✓ Data geladen uit cloud');
+      } else {
+        document.getElementById('welkom-scherm').style.display = 'flex';
+        document.getElementById('hoofd-app').style.display = 'none';
+      }
+    });
   }
 }
 
