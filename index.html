@@ -1266,12 +1266,21 @@ function renderDashboard() {
     omzet: facturen.filter(f=>f.status==='verstuurd' && f.factuurdatum?.startsWith(j)).reduce((s,f)=>s+f.totaal,0),
     aantal: facturen.filter(f=>f.status==='verstuurd' && f.factuurdatum?.startsWith(j)).length
   }));
-  const omzetCards = omzetPerJaar.map(o=>`
+  const omzetCards = omzetPerJaar.map(o=>{
+    const fJaar = facturen.filter(f=>f.status==='verstuurd' && f.factuurdatum?.startsWith(o.jaar));
+    const exBtw = fJaar.reduce((s,f)=>s+f.subtotaal,0);
+    const btwBedrag = fJaar.reduce((s,f)=>s+(f.btwBedrag||0),0);
+    return `
     <div class="stat-card">
       <div class="stat-label">Omzet ${o.jaar}</div>
       <div class="stat-value">€${fmt(o.omzet)}</div>
       <div class="stat-sub">${o.aantal} facturen verstuurd</div>
-    </div>`).join('');
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">
+        Excl. BTW: €${fmt(exBtw)}<br>
+        BTW: €${fmt(btwBedrag)}
+      </div>
+    </div>`;
+  }).join('');
 
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-card">
