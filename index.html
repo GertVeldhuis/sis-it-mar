@@ -627,7 +627,7 @@ tr:hover td { background: var(--bg); }
     <div class="card-header"><span class="card-title">Automatische backup</span></div>
     <div class="flex gap-3" style="flex-wrap:wrap">
       <button class="btn btn-primary" onclick="koppelBackupMap()">📁 Koppel backup-map</button>
-      <button class="btn" onclick="maakBackup(true)">💾 Backup nu</button>
+      <button class="btn" onclick="maakBackup(true);schrijfAppBestanden()">💾 Backup nu</button>
       <button class="btn" onclick="herstelBackup()">↩ Herstel backup</button>
     </div>
     <div id="backup-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
@@ -2566,10 +2566,56 @@ async function koppelBackupMap() {
     backupDirHandle = handle;
     await slaBackupHandleOp(handle);
     await maakBackup(true);
+    await schrijfAppBestanden();
     toast('✓ Backup-map gekoppeld: ' + handle.name);
     renderInstellingen();
   } catch(e) {
     if(e.name !== 'AbortError') alert('Fout: ' + e.message);
+  }
+}
+
+async function schrijfAppBestanden() {
+  if(!backupDirHandle) return;
+  try {
+    const perm = await backupDirHandle.requestPermission({ mode: 'readwrite' });
+    if(perm !== 'granted') return;
+
+    // Schrijf README
+    const readme = await backupDirHandle.getFileHandle('README.txt', { create: true });
+    const rwrit = await readme.createWritable();
+    await rwrit.write(`Sis it Mar — Backup map
+=======================
+
+Inhoud van deze map:
+- sim-backup-dag-01.json t/m sim-backup-dag-31.json
+  Dagelijkse data-backups (roterend, 31 slots)
+  Bevat alle klanten, openstaande regels, facturen en instellingen.
+
+- sis_it_mar.html
+  De volledige app. Open dit bestand in Chrome om de app te gebruiken.
+
+Herstellen:
+  Open de app → Instellingen → Automatische backup → Herstel backup
+  Kies het gewenste sim-backup-dag-XX.json bestand.
+
+Aangemaakt: ${new Date().toLocaleDateString('nl-NL')}
+`);
+    await rwrit.close();
+
+    // Schrijf de app zelf op via fetch
+    try {
+      const appResp = await fetch(window.location.href);
+      const appTekst = await appResp.text();
+      const appFile = await backupDirHandle.getFileHandle('sis_it_mar.html', { create: true });
+      const awrit = await appFile.createWritable();
+      await awrit.write(appTekst);
+      await awrit.close();
+    } catch(e) {
+      console.warn('App backup fout:', e);
+    }
+
+  } catch(e) {
+    console.warn('Schrijf app bestanden fout:', e);
   }
 }
 
