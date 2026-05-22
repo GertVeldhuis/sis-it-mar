@@ -619,14 +619,18 @@ tr:hover td { background: var(--bg); }
     <div class="card-header">
       <span class="card-title">Data export / import</span>
     </div>
-    <div class="flex gap-3">
-      <button class="btn" onclick="exportData()">⬇ Exporteer JSON (backup)</button>
+    <div class="flex gap-3" style="flex-wrap:wrap">
+      <button class="btn" onclick="exportData()">⬇ Exporteer JSON</button>
       <label class="btn" style="cursor:pointer">
         ⬆ Importeer JSON
         <input type="file" accept=".json" style="display:none" onchange="importData(this)">
       </label>
+      <button class="btn btn-primary" onclick="koppelBestand()">📂 Koppel databestand</button>
     </div>
-    <p class="text-sm text-muted mt-1">Exporteer regelmatig en sla op in iCloud Drive als backup.</p>
+    <div id="bestand-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
+      Geen databestand gekoppeld — wijzigingen worden alleen lokaal opgeslagen.
+    </div>
+    <p class="text-sm text-muted mt-1">Koppel je JSON-bestand in iCloud Drive voor automatisch opslaan en laden.</p>
   </div>
 </div>
 
@@ -2153,6 +2157,16 @@ function verwijderKlant(id) {
 // INSTELLINGEN
 // ════════════════════════════════════════════════
 function renderInstellingen() {
+  const statusEl = document.getElementById('bestand-status');
+  if(statusEl) {
+    if(fileHandle) {
+      statusEl.textContent = '✓ Gekoppeld: ' + fileHandle.name;
+      statusEl.style.color = 'var(--accent)';
+    } else {
+      statusEl.textContent = 'Geen databestand gekoppeld — wijzigingen worden alleen lokaal opgeslagen.';
+      statusEl.style.color = 'var(--muted)';
+    }
+  }
   const ins = instellingen;
   const set = (id, val) => {
     const el = document.getElementById(id);
