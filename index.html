@@ -1273,10 +1273,10 @@ function renderDashboard() {
     return `
     <div class="stat-card">
       <div class="stat-label">Omzet ${o.jaar}</div>
-      <div class="stat-value">€${fmt(o.omzet)}</div>
+      <div class="stat-value">€${fmt(exBtw)}</div>
       <div class="stat-sub">${o.aantal} facturen verstuurd</div>
       <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">
-        Excl. BTW: €${fmt(exBtw)}<br>
+        Incl. BTW: €${fmt(o.omzet)}<br>
         BTW: €${fmt(btwBedrag)}
       </div>
     </div>`;
