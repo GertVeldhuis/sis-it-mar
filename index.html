@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sis it Mar — Facturatie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1058,6 +1056,33 @@ function laad() {
       return true;
     });
 
+    // Voeg 2026004 RMO toe als hij ontbreekt
+    if(!facturen.find(f => f.nummer === '2026004')) {
+      facturen.push({
+        id: uid(), nummer: '2026004', klantId: 'k1',
+        factuurdatum: '2026-02-28', vervaldatum: '2026-03-14', opmerking: '',
+        regels: [
+          {omschrijving: '2026-02-01 — RMO 90', bedrag: 30, aantal: 12.33, subtotaal: 369.90, btw: 21},
+          {omschrijving: '2026-02-03 — RMO 620', bedrag: 30, aantal: 3.5, subtotaal: 105.00, btw: 21},
+          {omschrijving: '2026-02-06 — RMO 620', bedrag: 30, aantal: 13.66, subtotaal: 409.80, btw: 21},
+          {omschrijving: '2026-02-07 — RMO 620', bedrag: 30, aantal: 11.2, subtotaal: 336.00, btw: 21},
+          {omschrijving: '2026-02-09 — RMO 90', bedrag: 30, aantal: 12.75, subtotaal: 382.50, btw: 21},
+          {omschrijving: '2026-02-15 — RMO 620', bedrag: 30, aantal: 3.75, subtotaal: 112.50, btw: 21},
+          {omschrijving: '2026-02-16 — RMO 90', bedrag: 30, aantal: 17, subtotaal: 510.00, btw: 21},
+          {omschrijving: '2026-02-22 — RMO 620', bedrag: 30, aantal: 15.5, subtotaal: 465.00, btw: 21},
+          {omschrijving: '2026-02-23 — RMO 620', bedrag: 30, aantal: 7.5, subtotaal: 225.00, btw: 21},
+          {omschrijving: '2026-02-26 — RMO 620', bedrag: 30, aantal: 11.25, subtotaal: 337.50, btw: 21},
+          {omschrijving: '2026-02-28 — RMO 90', bedrag: 30, aantal: 10.75, subtotaal: 322.50, btw: 21},
+          {omschrijving: 'Reiskosten 03-02 opstap Deersum', bedrag: 0.25, aantal: 23, subtotaal: 5.75, btw: 21},
+          {omschrijving: 'Reiskosten 15-02 opstap Deersum', bedrag: 0.25, aantal: 23, subtotaal: 5.75, btw: 21},
+          {omschrijving: 'Reiskosten 07-02 opstap Balk', bedrag: 0.25, aantal: 32, subtotaal: 8.00, btw: 21},
+        ],
+        subtotaal: 3595.20, btwGroepen: {'21': 3595.20}, btwBedrag: 754.99, totaal: 4350.19,
+        status: 'verstuurd', aangemaakt: '2026-02-28T00:00:00Z'
+      });
+      gereset = true;
+    }
+
     // Voeg 2026011 Holding toe als hij ontbreekt
     if(!facturen.find(f => f.nummer === '2026011')) {
       facturen.push({
@@ -1850,40 +1875,16 @@ function printFactuur(id) {
   window.print();
 }
 
-async function downloadPDF(id) {
+function downloadPDF(id) {
   const f = facturen.find(x=>x.id===id);
   if(!f) return;
-  const el = document.getElementById('fp-'+id);
-  if(!el) return;
-
-  toast('PDF wordt gegenereerd...');
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      width: el.scrollWidth,
-      height: el.scrollHeight
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = 210;
-    const pageH = 297;
-    const margin = 15;
-    const usableW = pageW - margin * 2;
-    const imgH = (canvas.height * usableW) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', margin, margin, usableW, imgH);
-    const k = klanten.find(x=>x.id===f.klantId);
-    const bestandsnaam = `Factuur_${f.nummer==='concept'?'concept':f.nummer}_${k?.naam?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
-    pdf.save(bestandsnaam);
-    toast('✓ PDF opgeslagen: ' + bestandsnaam);
-  } catch(err) {
-    toast('Fout bij PDF: ' + err.message);
-  }
+  const k = klanten.find(x=>x.id===f.klantId);
+  const naam = `Factuur_${f.nummer==='concept'?'concept':f.nummer}_${k?.naam?.replace(/[^a-zA-Z0-9]/g,'_')}`;
+  // Stel documenttitel in voor bestandsnaam bij opslaan
+  const oudeTitle = document.title;
+  document.title = naam;
+  window.print();
+  document.title = oudeTitle;
 }
 
 function markeerVerstuurd(id) {
