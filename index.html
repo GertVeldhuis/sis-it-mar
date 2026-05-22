@@ -1077,7 +1077,6 @@ function laad() {
     // Reset hardcoded nummers van concept-facturen naar 'concept'
     const oudeNummers = ['2026018','2026019','2026020','2026021',
       '2026010','2026011','2026012','2026013','2026014','2026015','2026016','2026017'];
-    let gereset = false;
     facturen.forEach(f => {
       if(f.status === 'concept' && oudeNummers.includes(f.nummer)) {
         f.nummer = 'concept';
