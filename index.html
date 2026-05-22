@@ -2593,15 +2593,23 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function sluitModal(id) { document.getElementById(id).classList.remove('open'); }
 
 // Toast
-function toast(msg) {
+function toast(msg, duur) {
   let t = document.getElementById('toast');
   if(!t) { t=document.createElement('div'); t.id='toast'; document.body.appendChild(t);
     Object.assign(t.style,{position:'fixed',bottom:'1.5rem',left:'50%',transform:'translateX(-50%)',
       background:'var(--accent)',color:'white',padding:'0.6rem 1.25rem',borderRadius:'20px',
-      fontSize:'14px',zIndex:'9999',transition:'opacity .3s',fontFamily:"'DM Sans',sans-serif"}); }
+      fontSize:'14px',zIndex:'9999',transition:'opacity .3s',fontFamily:"'DM Sans',sans-serif",
+      cursor:'pointer'}); 
+    t.onclick = () => t.style.opacity='0';
+  }
   t.textContent = msg; t.style.opacity='1';
+  t.style.background = msg.startsWith('⚠') ? '#92400e' : 'var(--accent)';
   clearTimeout(t._timer);
-  t._timer = setTimeout(()=>t.style.opacity='0',2500);
+  t._timer = setTimeout(()=>t.style.opacity='0', duur||2500);
+}
+
+function toastWaarschuwing(msg) {
+  toast(msg, 8000);
 }
 
 // Sluit modals bij klik buiten
@@ -2814,7 +2822,7 @@ async function init() {
     setTimeout(() => maakBackup(), 3000);
     // Seintje als backup-map niet gekoppeld is
     setTimeout(() => {
-      if(!backupDirHandle) toast('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
+      if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
     }, 4000);
   } else {
     // Probeer cloud te laden
