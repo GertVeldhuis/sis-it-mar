@@ -2474,6 +2474,12 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 // INIT
 // ════════════════════════════════════════════════
 async function init() {
+  // Verberg agenda-knop op GitHub Pages (CORS blokkeert Anthropic API)
+  if(window.location.hostname.includes('github.io')) {
+    const card = document.getElementById('agenda-card');
+    if(card) card.style.display = 'none';
+  }
+
   // Probeer opgeslagen fileHandle te laden
   const handle = await laadHandle();
   if(handle) {
