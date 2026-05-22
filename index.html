@@ -386,6 +386,17 @@ tr:hover td { background: var(--bg); }
 <body>
 
 <!-- NAV -->
+<div id="welkom-scherm" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
+  <div style="font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent)">Sis it Mar</div>
+  <div id="welkom-titel" style="font-size:18px;font-weight:500">Welkom</div>
+  <div id="welkom-sub" style="color:var(--muted);font-size:14px;text-align:center;max-width:320px">Koppel je databestand om te beginnen, of maak een nieuw bestand aan.</div>
+  <div style="display:flex;flex-direction:column;gap:0.75rem;width:280px">
+    <button id="welkom-koppel-btn" class="btn btn-primary" style="justify-content:center;padding:0.75rem" onclick="koppelBestand()">📂 Koppel databestand</button>
+    <button class="btn" style="justify-content:center;padding:0.75rem" onclick="nieuwBestand()">✨ Nieuw databestand</button>
+    <button class="btn" style="justify-content:center;padding:0.75rem" onclick="document.getElementById('welkom-scherm').style.display='none';document.getElementById('hoofd-app').style.display='block';laad();renderDashboard()">⚡ Gebruik lokale data</button>
+  </div>
+</div>
+<div id="hoofd-app" style="display:block">
 <nav id="nav">
   <div class="logo">Sis it Mar</div>
   <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
@@ -767,6 +778,10 @@ let klanten = [];
 let regels = [];
 let facturen = [];
 let instellingen = {};
+let fileHandle = null;
+let saveTimeout = null;
+const DB_NAME = 'SisItMarDB';
+const STORE_NAME = 'handles';
 
 const DEFAULTS = {
   klanten: [
@@ -829,6 +844,113 @@ const DEFAULTS = {
 // ════════════════════════════════════════════════
 // LOAD / SAVE
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// FILE SYSTEM ACCESS
+// ════════════════════════════════════════════════
+async function slaHandleOp(handle) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(handle, 'fileHandle');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject();
+    };
+  });
+}
+
+async function laadHandle() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const get = tx.objectStore(STORE_NAME).get('fileHandle');
+      get.onsuccess = () => resolve(get.result || null);
+      get.onerror = () => resolve(null);
+    };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function leesVanBestand(handle) {
+  const file = await handle.getFile();
+  const tekst = await file.text();
+  return JSON.parse(tekst);
+}
+
+async function schrijfNaarBestand() {
+  if(!fileHandle) return;
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    try {
+      const perm = await fileHandle.requestPermission({ mode: 'readwrite' });
+      if(perm !== 'granted') return;
+      const writable = await fileHandle.createWritable();
+      const data = { klanten, regels, facturen, instellingen, _opgeslagen: new Date().toISOString() };
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      localStorage.setItem('sim_klanten', JSON.stringify(klanten));
+      localStorage.setItem('sim_regels', JSON.stringify(regels));
+      localStorage.setItem('sim_facturen', JSON.stringify(facturen));
+      localStorage.setItem('sim_instellingen', JSON.stringify(instellingen));
+    } catch(e) { console.warn('Schrijffout:', e); }
+  }, 600);
+}
+
+async function koppelBestand() {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'JSON', accept: {'application/json': ['.json']} }],
+      multiple: false
+    });
+    fileHandle = handle;
+    await slaHandleOp(handle);
+    const data = await leesVanBestand(handle);
+    verwerkData(data);
+    document.getElementById('welkom-scherm').style.display = 'none';
+    document.getElementById('hoofd-app').style.display = 'block';
+    renderDashboard();
+    toast('✓ Databestand gekoppeld: ' + handle.name);
+  } catch(e) {
+    if(e.name !== 'AbortError') alert('Kon bestand niet openen: ' + e.message);
+  }
+}
+
+async function nieuwBestand() {
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'sis-it-mar-data.json',
+      types: [{ description: 'JSON', accept: {'application/json': ['.json']} }]
+    });
+    fileHandle = handle;
+    await slaHandleOp(handle);
+    klanten = DEFAULTS.klanten;
+    regels = [];
+    facturen = [];
+    instellingen = { ...DEFAULTS.instellingen };
+    await schrijfNaarBestand();
+    document.getElementById('welkom-scherm').style.display = 'none';
+    document.getElementById('hoofd-app').style.display = 'block';
+    renderDashboard();
+    toast('✓ Nieuw databestand aangemaakt');
+  } catch(e) {
+    if(e.name !== 'AbortError') alert('Fout: ' + e.message);
+  }
+}
+
+function verwerkData(data) {
+  if(data.klanten) klanten = data.klanten;
+  if(data.regels) regels = data.regels;
+  if(data.facturen) facturen = data.facturen;
+  if(data.instellingen) instellingen = data.instellingen;
+  else instellingen = { ...DEFAULTS.instellingen };
+  verwerkStartup();
+}
+
 function laad() {
   klanten = JSON.parse(localStorage.getItem('sim_klanten') || 'null') || DEFAULTS.klanten;
   const opgeslagenRegels = localStorage.getItem('sim_regels');
@@ -1025,6 +1147,7 @@ function sla() {
   localStorage.setItem('sim_regels', JSON.stringify(regels));
   localStorage.setItem('sim_facturen', JSON.stringify(facturen));
   localStorage.setItem('sim_instellingen', JSON.stringify(instellingen));
+  schrijfNaarBestand();
 }
 
 // ════════════════════════════════════════════════
@@ -2287,8 +2410,64 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
-laad();
-renderDashboard();
+async function init() {
+  // Probeer opgeslagen fileHandle te laden
+  const handle = await laadHandle();
+  if(handle) {
+    try {
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
+      if(perm === 'granted') {
+        fileHandle = handle;
+        const data = await leesVanBestand(handle);
+        verwerkData(data);
+        document.getElementById('welkom-scherm').style.display = 'none';
+        document.getElementById('hoofd-app').style.display = 'block';
+        renderDashboard();
+        return;
+      } else {
+        // Toon welkomstscherm met "herverbind" knop
+        fileHandle = handle;
+        document.getElementById('welkom-scherm').style.display = 'flex';
+        document.getElementById('hoofd-app').style.display = 'none';
+        document.getElementById('welkom-titel').textContent = 'Herverbind databestand';
+        document.getElementById('welkom-sub').textContent = 'Klik om toegang te geven tot: ' + handle.name;
+        document.getElementById('welkom-koppel-btn').textContent = '🔓 Geef toegang';
+        document.getElementById('welkom-koppel-btn').onclick = async () => {
+          const perm2 = await handle.requestPermission({ mode: 'readwrite' });
+          if(perm2 === 'granted') {
+            fileHandle = handle;
+            const data = await leesVanBestand(handle);
+            verwerkData(data);
+            document.getElementById('welkom-scherm').style.display = 'none';
+            document.getElementById('hoofd-app').style.display = 'block';
+            renderDashboard();
+          }
+        };
+        return;
+      }
+    } catch(e) {
+      console.warn('Handle niet meer geldig:', e);
+    }
+  }
+  // Geen handle — toon welkomstscherm of laad uit localStorage
+  const heeftLocalData = localStorage.getItem('sim_klanten');
+  if(heeftLocalData) {
+    laad();
+    document.getElementById('welkom-scherm').style.display = 'none';
+    document.getElementById('hoofd-app').style.display = 'block';
+    renderDashboard();
+  } else {
+    document.getElementById('welkom-scherm').style.display = 'flex';
+    document.getElementById('hoofd-app').style.display = 'none';
+  }
+}
+
+function verwerkStartup() {
+  // Alle startup-logica (reeds in laad() verwerkt via localStorage fallback)
+}
+
+init();
 </script>
+</div><!-- /hoofd-app -->
 </body>
 </html>
