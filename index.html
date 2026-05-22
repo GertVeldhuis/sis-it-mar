@@ -1058,6 +1058,22 @@ function laad() {
       return true;
     });
 
+    // Voeg 2026011 Holding toe als hij ontbreekt
+    if(!facturen.find(f => f.nummer === '2026011')) {
+      facturen.push({
+        id: uid(), nummer: '2026011', klantId: 'k3',
+        factuurdatum: '2026-04-20', vervaldatum: '2026-05-04', opmerking: '',
+        regels: [
+          {omschrijving: 'Gemaakte uren Q1 2026', bedrag: 70, aantal: 9, subtotaal: 630, btw: 21},
+          {omschrijving: 'Reiskosten Q1 2026', bedrag: 0.25, aantal: 120, subtotaal: 30, btw: 21},
+          {omschrijving: 'Opnemen meterstanden, melding lekkage en regelen airco', bedrag: 70, aantal: 3, subtotaal: 210, btw: 21}
+        ],
+        subtotaal: 870, btwGroepen: {'21': 870}, btwBedrag: 182.70, totaal: 1052.70,
+        status: 'verstuurd', aangemaakt: '2026-04-20T00:00:00Z'
+      });
+      gereset = true;
+    }
+
     // Fix Holding concept-facturen met 0 uren -> 9 uur standaard
     facturen.forEach(f => {
       if(f.klantId === 'k3' && f.status === 'concept' && f.subtotaal === 0) {
