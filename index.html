@@ -1973,9 +1973,11 @@ function printFactuur(id) {
   const html = bouwFactuurHTML(id);
   const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+naam+'</title>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">' +
-    '<style>@media print{@page{size:A4;margin:0}}body{margin:0}</style>' +
-    '</head><body>'+html+'<scri'+'pt>setTimeout(function(){window.print();window.close()},800)</scri'+'pt></body></html>');
+    '<style>' +
+    'body{margin:0;font-family:Arial,sans-serif;font-size:11pt;color:#1a1916}' +
+    '@media print{@page{size:A4;margin:0}body{margin:0}}' +
+    '</style>' +
+    '</head><body>'+html+'<scri'+'pt>window.onload=function(){window.print();}</scri'+'pt></body></html>');
   w.document.close();
 }
 
