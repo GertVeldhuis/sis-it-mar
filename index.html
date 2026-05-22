@@ -623,6 +623,19 @@ tr:hover td { background: var(--bg); }
     </div>
     <p class="text-sm text-muted mt-1">Koppel je JSON-bestand in iCloud Drive voor automatisch opslaan en laden.</p>
   </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Automatische backup</span></div>
+    <div class="flex gap-3" style="flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="koppelBackupMap()">📁 Koppel backup-map</button>
+      <button class="btn" onclick="maakBackup(true)">💾 Backup nu</button>
+      <button class="btn" onclick="herstelBackup()">↩ Herstel backup</button>
+    </div>
+    <div id="backup-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
+      Geen backup-map gekoppeld.
+    </div>
+    <p class="text-sm text-muted mt-1">31 dagelijkse slots, roterend. Koppel een map in iCloud Drive of Dropbox.</p>
+  </div>
+
 </div>
 
 <!-- ════════════ MODALS ════════════ -->
@@ -774,6 +787,7 @@ let regels = [];
 let facturen = [];
 let instellingen = {};
 let fileHandle = null;
+let backupDirHandle = null;
 let saveTimeout = null;
 const DB_NAME = 'SisItMarDB';
 const STORE_NAME = 'handles';
@@ -2235,6 +2249,18 @@ function voegMissendeFacturenToe() {
 }
 
 function renderInstellingen() {
+  const backupEl = document.getElementById('backup-status');
+  if(backupEl) {
+    if(backupDirHandle) {
+      const dag = new Date().getDate();
+      const gedaan = localStorage.getItem('sim_backup_dag_' + dag) === new Date().toDateString();
+      backupEl.textContent = '✓ Backup-map: ' + backupDirHandle.name + (gedaan ? ' — vandaag al gemaakt' : ' — nog geen backup vandaag');
+      backupEl.style.color = gedaan ? 'var(--accent)' : 'var(--warn)';
+    } else {
+      backupEl.textContent = 'Geen backup-map gekoppeld.';
+      backupEl.style.color = 'var(--muted)';
+    }
+  }
   const statusEl = document.getElementById('bestand-status');
   if(statusEl) {
     if(fileHandle) {
@@ -2503,6 +2529,100 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// BACKUP SYSTEEM
+// ════════════════════════════════════════════════
+async function laadBackupHandle() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const get = tx.objectStore(STORE_NAME).get('backupHandle');
+      get.onsuccess = () => resolve(get.result || null);
+      get.onerror = () => resolve(null);
+    };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function slaBackupHandleOp(handle) {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(handle, 'backupHandle');
+      tx.oncomplete = () => resolve();
+    };
+  });
+}
+
+async function koppelBackupMap() {
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    backupDirHandle = handle;
+    await slaBackupHandleOp(handle);
+    await maakBackup(true);
+    toast('✓ Backup-map gekoppeld: ' + handle.name);
+    renderInstellingen();
+  } catch(e) {
+    if(e.name !== 'AbortError') alert('Fout: ' + e.message);
+  }
+}
+
+async function maakBackup(forceer = false) {
+  if(!backupDirHandle) return;
+  try {
+    const perm = await backupDirHandle.requestPermission({ mode: 'readwrite' });
+    if(perm !== 'granted') return;
+
+    // Dagelijkse backup — slot = dag van de maand (1-31)
+    const nu = new Date();
+    const dag = nu.getDate();
+    const bestandsnaam = `sim-backup-dag-${String(dag).padStart(2,'0')}.json`;
+
+    // Check of we vandaag al een backup hebben gemaakt
+    const sleutel = 'sim_backup_dag_' + dag;
+    const dagteken = nu.toDateString();
+    if(!forceer && localStorage.getItem(sleutel) === dagteken) return;
+
+    const data = JSON.stringify({ klanten, regels, facturen, instellingen, _backup: nu.toISOString() }, null, 2);
+    const file = await backupDirHandle.getFileHandle(bestandsnaam, { create: true });
+    const writable = await file.createWritable();
+    await writable.write(data);
+    await writable.close();
+
+    localStorage.setItem(sleutel, dagteken);
+    console.log('Backup gemaakt:', bestandsnaam);
+  } catch(e) {
+    console.warn('Backup fout:', e);
+  }
+}
+
+async function herstelBackup() {
+  if(!backupDirHandle) return alert('Geen backup-map gekoppeld');
+  try {
+    const perm = await backupDirHandle.requestPermission({ mode: 'readwrite' });
+    if(perm !== 'granted') return;
+    // Toon bestandskiezer binnen de map
+    const [handle] = await window.showOpenFilePicker({
+      startIn: backupDirHandle,
+      types: [{ description: 'JSON backup', accept: {'application/json': ['.json']} }]
+    });
+    const file = await handle.getFile();
+    const data = JSON.parse(await file.text());
+    verwerkData(data);
+    sla();
+    renderDashboard();
+    toast('✓ Backup hersteld: ' + handle.name);
+  } catch(e) {
+    if(e.name !== 'AbortError') alert('Fout: ' + e.message);
+  }
+}
+
 async function init() {
   // Verberg agenda-knop op GitHub Pages (CORS blokkeert Anthropic API)
   if(window.location.hostname.includes('github.io')) {
@@ -2549,6 +2669,10 @@ async function init() {
     }
   }
   // Geen handle — toon welkomstscherm of laad uit localStorage
+  // Laad backup handle
+  const bHandle = await laadBackupHandle();
+  if(bHandle) backupDirHandle = bHandle;
+
   const heeftLocalData = localStorage.getItem('sim_klanten');
   if(heeftLocalData) {
     laad();
@@ -2557,6 +2681,8 @@ async function init() {
     renderDashboard();
     // Probeer op achtergrond cloud te laden (nieuwere data)
     laadVanCloud().then(ok => { if(ok) { renderDashboard(); } });
+    // Dagelijkse backup
+    setTimeout(() => maakBackup(), 3000);
   } else {
     // Probeer cloud te laden
     document.getElementById('welkom-scherm').style.display = 'none';
