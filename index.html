@@ -901,6 +901,19 @@ function laad() {
         facturen.push({...h, id: uid(), aangemaakt: h.factuurdatum+'T00:00:00Z'});
       }
     });
+    // 2026011 terugzetten naar concept (was foutief verstuurd)
+    const f2026011 = facturen.find(f => f.nummer === '2026011');
+    if(f2026011 && f2026011.status === 'verstuurd') {
+      f2026011.status = 'concept';
+      f2026011.nummer = 'concept';
+      gereset = true;
+    }
+
+    // Verwijder Holding Q1 factuur (20-04-2026)
+    const voor = facturen.length;
+    facturen = facturen.filter(f => !(f.klantId === 'k3' && f.factuurdatum === '2026-04-20'));
+    if(facturen.length !== voor) gereset = true;
+
     // Verwijder duplicate concept-facturen (zelfde klant + datum)
     const gezien = new Set();
     facturen = facturen.filter(f => {
