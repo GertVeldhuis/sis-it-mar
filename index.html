@@ -1910,20 +1910,77 @@ function slaBewerktOp() {
   toast('Factuur '+f.nummer+' bijgewerkt');
 }
 
-function printFactuur(id) {
-  window.print();
+function bouwFactuurHTML(id) {
+  const f = facturen.find(x=>x.id===id);
+  if(!f) return '';
+  const k = klanten.find(x=>x.id===f.klantId);
+  const ins = instellingen;
+  const insNaam = ins.naam || 'Sis it mar';
+  const insAdres = ins.adres || 'Thaborwei 25';
+  const insPc = ins.pc || '8632 WG  Tirns';
+  const insTel = ins.tel || '(+31) 6 53 299622';
+  const insIban = ins.iban || 'NL44 ABNA 0869 0257 75';
+  const insBtwnr = ins.btwnr || '110515407B02';
+  const insKvk = ins.kvk || '76971376';
+  const btwRijen = Object.entries(f.btwGroepen||{}).map(([pct,amt])=>
+    '<tr><td colspan="3" style="text-align:right;color:#666">BTW '+pct+'%</td><td style="text-align:right">'+fmt(amt*pct/100)+'</td></tr>'
+  ).join('');
+  const regelRijen = f.regels.map(r=>
+    '<tr><td>'+r.omschrijving+(r.opmerking?'<br><small style="color:#666">'+r.opmerking+'</small>':'')+'</td>' +
+    '<td style="text-align:right">'+r.aantal+'</td>' +
+    '<td style="text-align:right">'+fmt(r.bedrag)+'</td>' +
+    '<td style="text-align:right">'+fmt(r.subtotaal)+'</td></tr>'
+  ).join('');
+  return '<div style="font-family:DM Sans,sans-serif;font-size:11pt;color:#1a1916;padding:15mm 18mm">' +
+    '<div style="display:flex;justify-content:space-between;margin-bottom:2rem">' +
+      '<div><div style="font-family:Instrument Serif,serif;font-size:22pt;color:#1a5c3a">'+insNaam+'</div>' +
+      '<div style="font-size:13px;color:#666">'+insAdres+'<br>'+insPc+'<br>'+insTel+'</div></div>' +
+      '<div style="text-align:right"><div style="font-size:22pt;font-family:Instrument Serif,serif">Factuur</div>' +
+      '<div style="font-size:13px">Nr. '+(f.nummer==='concept'?'concept':f.nummer)+'<br>Datum: '+nlDatum(f.factuurdatum)+'<br>Vervaldatum: '+nlDatum(f.vervaldatum)+'</div></div>' +
+    '</div>' +
+    '<div style="margin-bottom:1.5rem"><div style="font-size:12px;color:#666">Factuur voor</div>' +
+      '<div style="font-weight:500">'+(k?.naam||'')+'</div>' +
+      (k?.contact?'<div style="font-size:13px">t.a.v. '+k.contact+'</div>':'') +
+      (k?.straat?'<div style="font-size:13px">'+k.straat+'</div>':'') +
+      (k?.pc?'<div style="font-size:13px">'+k.pc+'</div>':'') +
+    '</div>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+      '<thead><tr>' +
+        '<th style="text-align:left;width:50%;padding:5px 6px;border-top:2px solid #1a1916;border-bottom:1px solid #ccc;font-size:10pt">Beschrijving</th>' +
+        '<th style="text-align:right;padding:5px 6px;border-top:2px solid #1a1916;border-bottom:1px solid #ccc;font-size:10pt">Aantal</th>' +
+        '<th style="text-align:right;padding:5px 6px;border-top:2px solid #1a1916;border-bottom:1px solid #ccc;font-size:10pt">Stukprijs</th>' +
+        '<th style="text-align:right;padding:5px 6px;border-top:2px solid #1a1916;border-bottom:1px solid #ccc;font-size:10pt">Totaal</th>' +
+      '</tr></thead>' +
+      '<tbody>'+regelRijen+'</tbody>' +
+      '<tfoot>' +
+        '<tr><td colspan="3" style="text-align:right;color:#666;padding:5px 6px">Subtotaal</td><td style="text-align:right;padding:5px 6px">'+fmt(f.subtotaal)+'</td></tr>' +
+        btwRijen +
+        '<tr><td colspan="3" style="text-align:right;font-family:Instrument Serif,serif;font-size:16pt;padding:8px 6px;border-top:2px solid #1a1916">Totaal</td>' +
+        '<td style="text-align:right;font-size:16pt;font-weight:500;padding:8px 6px;border-top:2px solid #1a1916">'+fmt(f.totaal)+'</td></tr>' +
+      '</tfoot>' +
+    '</table>' +
+    (f.opmerking?'<div style="font-size:13px;color:#666;margin-top:1rem">'+f.opmerking+'</div>':'') +
+    '<div style="border-top:1px solid #e4e2db;padding-top:1rem;margin-top:2rem;font-size:11px;color:#666;text-align:center">' +
+      'Rekeningnummer '+insIban+' — BTW nummer: '+insBtwnr+' — KvK '+insKvk +
+    '</div></div>';
 }
 
-function downloadPDF(id) {
+function printFactuur(id) {
   const f = facturen.find(x=>x.id===id);
   if(!f) return;
   const k = klanten.find(x=>x.id===f.klantId);
-  const naam = `Factuur_${f.nummer==='concept'?'concept':f.nummer}_${k?.naam?.replace(/[^a-zA-Z0-9]/g,'_')}`;
-  // Stel documenttitel in voor bestandsnaam bij opslaan
-  const oudeTitle = document.title;
-  document.title = naam;
-  window.print();
-  document.title = oudeTitle;
+  const naam = 'Factuur_'+(f.nummer==='concept'?'concept':f.nummer)+'_'+(k?.naam||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const html = bouwFactuurHTML(id);
+  const w = window.open('', '_blank', 'width=820,height=1100');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+naam+'</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">' +
+    '<style>@media print{@page{size:A4;margin:0}}body{margin:0}</style>' +
+    '</head><body>'+html+'<scri'+'pt>setTimeout(function(){window.print();window.close()},800)</scri'+'pt></body></html>');
+  w.document.close();
+}
+
+function downloadPDF(id) {
+  printFactuur(id);
 }
 
 function markeerVerstuurd(id) {
