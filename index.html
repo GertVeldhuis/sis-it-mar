@@ -610,7 +610,7 @@ tr:hover td { background: var(--bg); }
       <div class="form-row"><label>Betalingstermijn (dagen)</label><input type="number" id="set-termijn" value="14"></div>
       <div class="form-row"><label>RMO uurtarief (€)</label><input type="number" id="set-rmo-tarief" step="0.01" value="30"></div>
       <div class="form-row"><label>RMO km-vergoeding (€)</label><input type="number" id="set-rmo-km" step="0.01" value="0.25"></div>
-      <div class="form-row"><label>BCC financieel pakket</label><input type="text" id="set-bcc" value="6y6b@inkoop.exactonline.nl"></div>
+      <div class="form-row"><label>BCC financieel pakket</label><input type="text" id="set-bcc" value="6y6b@verkoop.exactonline.nl"></div>
     </div>
     <button class="btn btn-primary" onclick="slaInstellingenOp()">Opslaan</button>
   </div>
@@ -837,7 +837,7 @@ const DEFAULTS = {
     btwnr:'110515407B02', kvk:'76971376', email:'gert@turns.nl',
     volgend_nr: 10, termijn: 14,
     rmo_tarief: 30, rmo_km: 0.25,
-    bcc: '6y6b@inkoop.exactonline.nl'
+    bcc: '6y6b@verkoop.exactonline.nl'
   }
 };
 
@@ -2055,7 +2055,7 @@ function openMailModal(fid) {
 
   const volleTekst = (k.aanhef ? k.aanhef+'\n\n' : '') + tekst + '\n\n-- \nvr gr Gert Veldhuis';
 
-  const bccAdres = instellingen.bcc || document.getElementById('set-bcc')?.value || '6y6b@inkoop.exactonline.nl';
+  const bccAdres = instellingen.bcc || document.getElementById('set-bcc')?.value || '6y6b@verkoop.exactonline.nl';
 
   document.getElementById('mail-body').innerHTML = `
     <div class="form-row"><label>Aan</label><input type="email" id="mail-aan" value="${k.email}"></div>
@@ -2184,7 +2184,7 @@ function slaInstellingenOp() {
     termijn: parseInt(g('set-termijn'))||14,
     rmo_tarief: parseFloat(g('set-rmo-tarief'))||30,
     rmo_km: parseFloat(g('set-rmo-km'))||0.25,
-    bcc: g('set-bcc') || '6y6b@inkoop.exactonline.nl'
+    bcc: g('set-bcc') || '6y6b@verkoop.exactonline.nl'
   });
   sla(); toast('Instellingen opgeslagen');
 }
