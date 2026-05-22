@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sis it Mar — Facturatie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1553,6 +1555,7 @@ function bekijkFactuur(id) {
   document.getElementById('vf-footer').innerHTML = `
     <button class="btn" onclick="sluitModal('modal-factuur-view')">Sluiten</button>
     <button class="btn" onclick="printFactuur('${id}')">🖨 Afdrukken</button>
+    <button class="btn btn-primary" onclick="downloadPDF('${id}')">⬇ Download PDF</button>
     <button class="btn" onclick="openMailModal('${id}');sluitModal('modal-factuur-view')">✉️ Versturen</button>
     ${f.status==='concept'?`<button class="btn" onclick="bewerkFactuur('${id}')">✏️ Aanpassen</button>`:''}
     ${f.status==='concept'?`<button class="btn btn-primary" onclick="markeerVerstuurd('${id}');sluitModal('modal-factuur-view')">✓ Markeer verstuurd</button>`:''}`;
@@ -1682,6 +1685,42 @@ function slaBewerktOp() {
 
 function printFactuur(id) {
   window.print();
+}
+
+async function downloadPDF(id) {
+  const f = facturen.find(x=>x.id===id);
+  if(!f) return;
+  const el = document.getElementById('fp-'+id);
+  if(!el) return;
+
+  toast('PDF wordt gegenereerd...');
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: el.scrollWidth,
+      height: el.scrollHeight
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 15;
+    const usableW = pageW - margin * 2;
+    const imgH = (canvas.height * usableW) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', margin, margin, usableW, imgH);
+    const k = klanten.find(x=>x.id===f.klantId);
+    const bestandsnaam = `Factuur_${f.nummer==='concept'?'concept':f.nummer}_${k?.naam?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+    pdf.save(bestandsnaam);
+    toast('✓ PDF opgeslagen: ' + bestandsnaam);
+  } catch(err) {
+    toast('Fout bij PDF: ' + err.message);
+  }
 }
 
 function markeerVerstuurd(id) {
