@@ -1030,14 +1030,10 @@ function laad() {
 
     // 2026011 - laat staan zoals het is
 
-    // Verwijder duplicate Holding Q1 concepten, houd alleen degene met hoogste totaal
-    const holdingQ1 = facturen.filter(f => f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept');
-    if(holdingQ1.length > 1) {
-      holdingQ1.sort((a,b) => b.totaal - a.totaal);
-      const houdId = holdingQ1[0].id;
-      facturen = facturen.filter(f => !(f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept' && f.id !== houdId));
-      gereset = true;
-    }
+    // Verwijder Holding Q1 concepten met totaal €762,30 (oude versie zonder extra werk)
+    const voorH = facturen.length;
+    facturen = facturen.filter(f => !(f.klantId === 'k3' && f.factuurdatum === '2026-04-20' && f.status === 'concept' && Math.round(f.totaal * 100) === 76230));
+    if(facturen.length !== voorH) gereset = true;
 
     // Verwijder duplicate concept-facturen (zelfde klant + datum)
     const gezien = new Set();
