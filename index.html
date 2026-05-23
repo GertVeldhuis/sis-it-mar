@@ -1250,6 +1250,13 @@ function renderPage(name) {
 // DASHBOARD
 // ════════════════════════════════════════════════
 function renderDashboard() {
+  // Waarschuwing als backup-map niet gekoppeld
+  if(!backupDirHandle) {
+    clearTimeout(window._backupWarnTimer);
+    window._backupWarnTimer = setTimeout(() => {
+      if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
+    }, 2000);
+  }
   const openRegels = regels.filter(r => !r.factuurId);
   const totaalOpen = openRegels.reduce((s,r) => s + berekenBedrag(r), 0);
   const jaar = new Date().getFullYear();
