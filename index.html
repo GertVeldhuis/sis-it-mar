@@ -241,6 +241,19 @@ tr:hover td { background: var(--bg); }
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  padding-top: 1rem;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 .modal-header {
   display: flex;
@@ -252,14 +265,7 @@ tr:hover td { background: var(--bg); }
   font-family: 'Instrument Serif', serif;
   font-size: 19px;
 }
-.modal-footer {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
+/* modal-footer in .modal hierboven */
 
 /* ── DASHBOARD ── */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
