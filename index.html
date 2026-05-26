@@ -732,7 +732,7 @@ tr:hover td { background: var(--bg); }
       <div class="form-row"><label>Standaard uurtarief (€)</label><input type="number" id="k-tarief" step="0.01"></div>
       <div class="form-row"><label>Standaard uren (bijv. kwartaal)</label><input type="number" id="k-std-uren" step="0.5" placeholder="bijv. 9"></div>
       <div class="form-row"><label>Km-vergoeding (€, optioneel)</label><input type="number" id="k-kmtarief" step="0.01" placeholder="bijv. 0.25"></div>
-      <div class="form-row"><label>Standaard reisuren (optioneel)</label><input type="number" id="k-reisuren" step="0.25" placeholder="bijv. 0.5"></div>
+      <div class="form-row"><label>Tarief reisuren (€/uur)</label><input type="number" id="k-reisuren" step="0.01" placeholder="bijv. 30"></div>
       <div class="form-row"><label>Standaard reiskm (optioneel)</label><input type="number" id="k-reiskm" step="1" placeholder="bijv. 23"></div>
     </div>
     <div class="form-row"><label>E-mail aanhef</label><input type="text" id="k-aanhef" placeholder="bijv. Hoi Sjoukje,"></div>
@@ -1397,13 +1397,13 @@ function updateInvoerType() {
     document.getElementById('rmo-tarief').value = k.tarief || 30;
     document.getElementById('rmo-km-tarief').value = k.kmtarief || 0.25;
     // Vul standaard reiswaarden in
-    if(k.stdReisuren) { document.getElementById('rmo-reis-uren').value = k.stdReisuren; }
+    // reisuren tarief zit op k.reisUrenTarief, aantal vult gebruiker zelf in
     if(k.stdReiskm) { document.getElementById('rmo-reis-km').value = k.stdReiskm; }
   }
   if(k.type==='uren') {
     document.getElementById('uren-tarief').value = k.tarief;
     document.getElementById('uren-btw').value = k.btw;
-    if(k.stdReisuren) { document.getElementById('uren-reis-uren').value = k.stdReisuren; }
+    // reisuren tarief zit op k.reisUrenTarief, aantal vult gebruiker zelf in
     if(k.stdReiskm) { document.getElementById('uren-reis-km').value = k.stdReiskm; }
     const nu = new Date(); const mnd = nu.toLocaleString('nl',{month:'long'})+' '+nu.getFullYear();
     document.getElementById('uren-periode').value = mnd;
@@ -1436,6 +1436,7 @@ function slaRegelOp() {
       opstap: document.getElementById('rmo-opstap').value,
       uren, km, tarief, kmtarief,
       reisUren, reisKm,
+      reisUrenTarief: k.reisUrenTarief||k.tarief||30,
       opmerking: document.getElementById('rmo-opmerking').value,
       btw: k.btw
     });
@@ -1452,6 +1453,7 @@ function slaRegelOp() {
       omschrijving: document.getElementById('uren-omschrijving').value,
       aantal, tarief,
       reisUren, reisKm,
+      reisUrenTarief: k.reisUrenTarief||k.tarief||70,
       btw: parseFloat(document.getElementById('uren-btw').value)||21
     });
   } else {
@@ -1790,14 +1792,14 @@ function regelNaarFactuurRegel(r) {
     const sub = urenBedrag + kmBedrag;
     const omschr = `${r.datum}${r.opstap?' — RMO '+r.opstap:''}`;
     const regels = [{ omschrijving: omschr, bedrag: r.tarief, aantal: r.uren, subtotaal: urenBedrag, btw: r.btw, rawDatum: r.datum }];
-    if(r.reisUren > 0) regels.push({ omschrijving: `Reisuren ${r.datum}`, bedrag: r.tarief, aantal: r.reisUren, subtotaal: r.reisUren*r.tarief, btw: r.btw });
+    if(r.reisUren > 0) { const rut = r.reisUrenTarief||r.tarief; regels.push({ omschrijving: `Reisuren ${r.datum}`, bedrag: rut, aantal: r.reisUren, subtotaal: r.reisUren*rut, btw: r.btw }); }
     if(r.reisKm > 0) regels.push({ omschrijving: `Reiskosten ${r.datum}${r.opstap?' opstap':''}`, bedrag: r.kmtarief||0.25, aantal: r.reisKm, subtotaal: r.reisKm*(r.kmtarief||0.25), btw: r.btw });
     if(kmBedrag > 0) regels.push({ omschrijving: `Km-vergoeding ${r.datum}`, bedrag: r.kmtarief, aantal: r.km, subtotaal: kmBedrag, btw: r.btw });
     // Geef eerste regel terug maar voeg extra regels toe via meerdere returns
     return regels;
   } else if(r.type==='uren') {
     const regels = [{ omschrijving: r.omschrijving, bedrag: r.tarief, aantal: r.aantal, subtotaal: r.tarief*r.aantal, btw: r.btw }];
-    if(r.reisUren > 0) regels.push({ omschrijving: `Reisuren ${r.periode||''}`, bedrag: r.tarief, aantal: r.reisUren, subtotaal: r.reisUren*r.tarief, btw: r.btw });
+    if(r.reisUren > 0) { const rut = r.reisUrenTarief||r.tarief; regels.push({ omschrijving: `Reisuren ${r.periode||''}`, bedrag: rut, aantal: r.reisUren, subtotaal: r.reisUren*rut, btw: r.btw }); }
     if(r.reisKm > 0) regels.push({ omschrijving: `Reiskosten ${r.periode||''}`, bedrag: 0.25, aantal: r.reisKm, subtotaal: r.reisKm*0.25, btw: r.btw });
     return regels;
   } else {
@@ -2355,7 +2357,7 @@ function openKlantModal(id) {
   const km = document.getElementById('k-kmtarief');
   if(km) km.value = k?.kmtarief||'';
   const ru = document.getElementById('k-reisuren');
-  if(ru) ru.value = k?.stdReisuren||'';
+  if(ru) ru.value = k?.reisUrenTarief||'';
   const rkm = document.getElementById('k-reiskm');
   if(rkm) rkm.value = k?.stdReiskm||'';
   openModal('modal-klant');
