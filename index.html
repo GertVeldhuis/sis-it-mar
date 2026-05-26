@@ -471,6 +471,25 @@ tr:hover td { background: var(--bg); }
         <input type="text" id="rmo-opmerking" placeholder="bijv. Dalfsen extra">
       </div>
     </div>
+    <div id="rmo-reis-wrap" style="margin-top:0.5rem;padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <div style="font-size:13px;font-weight:500;margin-bottom:0.5rem">Reiskosten (optioneel)</div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="rmo-reis-uren-cb" style="width:auto" onchange="toggleReisUren()">
+            Reisuren
+          </label>
+          <input type="number" id="rmo-reis-uren" step="0.25" style="display:none" placeholder="uren">
+        </div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="rmo-reis-km-cb" style="width:auto" onchange="toggleReisKm()">
+            Reiskilometers
+          </label>
+          <input type="number" id="rmo-reis-km" step="1" style="display:none" placeholder="km">
+        </div>
+      </div>
+    </div>
 
     <div id="invoer-type-uren" style="display:none">
       <p class="text-sm text-muted mb-1">Uren — totaal invoeren</p>
@@ -495,6 +514,25 @@ tr:hover td { background: var(--bg); }
       <div class="form-row">
         <label>Omschrijving</label>
         <input type="text" id="uren-omschrijving" placeholder="bijv. Gemaakte uren april 2026">
+      </div>
+    </div>
+    <div id="uren-reis-wrap" style="margin-top:0.5rem;padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <div style="font-size:13px;font-weight:500;margin-bottom:0.5rem">Reiskosten (optioneel)</div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="uren-reis-uren-cb" style="width:auto" onchange="toggleUrenReisUren()">
+            Reisuren
+          </label>
+          <input type="number" id="uren-reis-uren" step="0.25" style="display:none" placeholder="uren">
+        </div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="uren-reis-km-cb" style="width:auto" onchange="toggleUrenReisKm()">
+            Reiskilometers
+          </label>
+          <input type="number" id="uren-reis-km" step="1" style="display:none" placeholder="km">
+        </div>
       </div>
     </div>
 
@@ -694,6 +732,8 @@ tr:hover td { background: var(--bg); }
       <div class="form-row"><label>Standaard uurtarief (€)</label><input type="number" id="k-tarief" step="0.01"></div>
       <div class="form-row"><label>Standaard uren (bijv. kwartaal)</label><input type="number" id="k-std-uren" step="0.5" placeholder="bijv. 9"></div>
       <div class="form-row"><label>Km-vergoeding (€, optioneel)</label><input type="number" id="k-kmtarief" step="0.01" placeholder="bijv. 0.25"></div>
+      <div class="form-row"><label>Standaard reisuren (optioneel)</label><input type="number" id="k-reisuren" step="0.25" placeholder="bijv. 0.5"></div>
+      <div class="form-row"><label>Standaard reiskm (optioneel)</label><input type="number" id="k-reiskm" step="1" placeholder="bijv. 23"></div>
     </div>
     <div class="form-row"><label>E-mail aanhef</label><input type="text" id="k-aanhef" placeholder="bijv. Hoi Sjoukje,"></div>
     <div class="form-row"><label>E-mail onderwerp template</label><input type="text" id="k-onderwerp" placeholder="bijv. Factuur {maand}"></div>
@@ -1354,12 +1394,17 @@ function updateInvoerType() {
   const vandaag = new Date().toISOString().split('T')[0];
   if(k.type==='rmo') {
     document.getElementById('rmo-datum').value = vandaag;
-    document.getElementById('rmo-tarief').value = k.tarief || instellingen.rmo_tarief;
+    document.getElementById('rmo-tarief').value = k.tarief || 30;
     document.getElementById('rmo-km-tarief').value = k.kmtarief || 0.25;
+    // Vul standaard reiswaarden in
+    if(k.stdReisuren) { document.getElementById('rmo-reis-uren').value = k.stdReisuren; }
+    if(k.stdReiskm) { document.getElementById('rmo-reis-km').value = k.stdReiskm; }
   }
   if(k.type==='uren') {
     document.getElementById('uren-tarief').value = k.tarief;
     document.getElementById('uren-btw').value = k.btw;
+    if(k.stdReisuren) { document.getElementById('uren-reis-uren').value = k.stdReisuren; }
+    if(k.stdReiskm) { document.getElementById('uren-reis-km').value = k.stdReiskm; }
     const nu = new Date(); const mnd = nu.toLocaleString('nl',{month:'long'})+' '+nu.getFullYear();
     document.getElementById('uren-periode').value = mnd;
     document.getElementById('uren-omschrijving').value = 'Gemaakte uren '+mnd;
@@ -1382,10 +1427,15 @@ function slaRegelOp() {
     const tarief = parseFloat(document.getElementById('rmo-tarief').value)||0;
     const kmtarief = parseFloat(document.getElementById('rmo-km-tarief').value)||0;
     if(!uren) return alert('Vul uren in');
+    const reisUrenCb = document.getElementById('rmo-reis-uren-cb');
+    const reisKmCb = document.getElementById('rmo-reis-km-cb');
+    const reisUren = reisUrenCb?.checked ? parseFloat(document.getElementById('rmo-reis-uren').value)||0 : 0;
+    const reisKm = reisKmCb?.checked ? parseFloat(document.getElementById('rmo-reis-km').value)||0 : 0;
     Object.assign(regel, {
       datum: document.getElementById('rmo-datum').value,
       opstap: document.getElementById('rmo-opstap').value,
       uren, km, tarief, kmtarief,
+      reisUren, reisKm,
       opmerking: document.getElementById('rmo-opmerking').value,
       btw: k.btw
     });
@@ -1393,10 +1443,15 @@ function slaRegelOp() {
     const aantal = parseFloat(document.getElementById('uren-aantal').value)||0;
     const tarief = parseFloat(document.getElementById('uren-tarief').value)||0;
     if(!aantal) return alert('Vul aantal uren in');
+    const reisUrenCb = document.getElementById('uren-reis-uren-cb');
+    const reisKmCb = document.getElementById('uren-reis-km-cb');
+    const reisUren = reisUrenCb?.checked ? parseFloat(document.getElementById('uren-reis-uren').value)||0 : 0;
+    const reisKm = reisKmCb?.checked ? parseFloat(document.getElementById('uren-reis-km').value)||0 : 0;
     Object.assign(regel, {
       periode: document.getElementById('uren-periode').value,
       omschrijving: document.getElementById('uren-omschrijving').value,
       aantal, tarief,
+      reisUren, reisKm,
       btw: parseFloat(document.getElementById('uren-btw').value)||21
     });
   } else {
@@ -1524,6 +1579,27 @@ function slaRegelBewerkOp() {
   renderOpenRegels();
   renderDashboard();
   toast('Regel bijgewerkt');
+}
+
+function toggleReisUren() {
+  const cb = document.getElementById('rmo-reis-uren-cb');
+  const inp = document.getElementById('rmo-reis-uren');
+  if(inp) inp.style.display = cb.checked ? 'block' : 'none';
+}
+function toggleReisKm() {
+  const cb = document.getElementById('rmo-reis-km-cb');
+  const inp = document.getElementById('rmo-reis-km');
+  if(inp) inp.style.display = cb.checked ? 'block' : 'none';
+}
+function toggleUrenReisUren() {
+  const cb = document.getElementById('uren-reis-uren-cb');
+  const inp = document.getElementById('uren-reis-uren');
+  if(inp) inp.style.display = cb.checked ? 'block' : 'none';
+}
+function toggleUrenReisKm() {
+  const cb = document.getElementById('uren-reis-km-cb');
+  const inp = document.getElementById('uren-reis-km');
+  if(inp) inp.style.display = cb.checked ? 'block' : 'none';
 }
 
 function verwijderRegel(id) {
@@ -1671,7 +1747,7 @@ function slaFactuurOp() {
   const extraAantal = parseInt(document.getElementById('extra-aantal')?.value)||1;
   const extraBtw = parseFloat(document.getElementById('extra-btw')?.value)||21;
 
-  const factuurRegels = selectedRegels.map(r=>regelNaarFactuurRegel(r));
+  const factuurRegels = selectedRegels.flatMap(r=>regelNaarFactuurRegel(r));
   if(extraOmschr && extraBedrag) {
     factuurRegels.push({ omschrijving: extraOmschr, bedrag: extraBedrag, aantal: extraAantal, btw: extraBtw, subtotaal: extraBedrag*extraAantal });
   }
@@ -1710,13 +1786,20 @@ function slaFactuurOp() {
 function regelNaarFactuurRegel(r) {
   if(r.type==='rmo') {
     const urenBedrag = r.uren * r.tarief;
-    const kmBedrag = r.km * r.kmtarief;
+    const kmBedrag = (r.km||0) * (r.kmtarief||0);
     const sub = urenBedrag + kmBedrag;
     const omschr = `${r.datum}${r.opstap?' — RMO '+r.opstap:''}`;
-    const details = `${r.uren} uur × €${r.tarief}${r.km?' + ${r.km} km × €${r.kmtarief}':''}`;
-    return { omschrijving: omschr, details, bedrag: r.tarief, aantal: r.uren, km: r.km, kmtarief: r.kmtarief, subtotaal: sub, btw: r.btw, rawDatum: r.datum };
+    const regels = [{ omschrijving: omschr, bedrag: r.tarief, aantal: r.uren, subtotaal: urenBedrag, btw: r.btw, rawDatum: r.datum }];
+    if(r.reisUren > 0) regels.push({ omschrijving: `Reisuren ${r.datum}`, bedrag: r.tarief, aantal: r.reisUren, subtotaal: r.reisUren*r.tarief, btw: r.btw });
+    if(r.reisKm > 0) regels.push({ omschrijving: `Reiskosten ${r.datum}${r.opstap?' opstap':''}`, bedrag: r.kmtarief||0.25, aantal: r.reisKm, subtotaal: r.reisKm*(r.kmtarief||0.25), btw: r.btw });
+    if(kmBedrag > 0) regels.push({ omschrijving: `Km-vergoeding ${r.datum}`, bedrag: r.kmtarief, aantal: r.km, subtotaal: kmBedrag, btw: r.btw });
+    // Geef eerste regel terug maar voeg extra regels toe via meerdere returns
+    return regels;
   } else if(r.type==='uren') {
-    return { omschrijving: r.omschrijving, bedrag: r.tarief, aantal: r.aantal, subtotaal: r.tarief*r.aantal, btw: r.btw };
+    const regels = [{ omschrijving: r.omschrijving, bedrag: r.tarief, aantal: r.aantal, subtotaal: r.tarief*r.aantal, btw: r.btw }];
+    if(r.reisUren > 0) regels.push({ omschrijving: `Reisuren ${r.periode||''}`, bedrag: r.tarief, aantal: r.reisUren, subtotaal: r.reisUren*r.tarief, btw: r.btw });
+    if(r.reisKm > 0) regels.push({ omschrijving: `Reiskosten ${r.periode||''}`, bedrag: 0.25, aantal: r.reisKm, subtotaal: r.reisKm*0.25, btw: r.btw });
+    return regels;
   } else {
     return { omschrijving: r.omschrijving, bedrag: r.bedrag, aantal: r.aantal, subtotaal: r.bedrag*r.aantal, btw: r.btw, opmerking: r.opmerking };
   }
@@ -2271,6 +2354,10 @@ function openKlantModal(id) {
   if(su) su.value = k?.stdUren||'';
   const km = document.getElementById('k-kmtarief');
   if(km) km.value = k?.kmtarief||'';
+  const ru = document.getElementById('k-reisuren');
+  if(ru) ru.value = k?.stdReisuren||'';
+  const rkm = document.getElementById('k-reiskm');
+  if(rkm) rkm.value = k?.stdReiskm||'';
   openModal('modal-klant');
 }
 
