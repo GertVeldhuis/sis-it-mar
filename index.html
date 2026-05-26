@@ -597,8 +597,7 @@ tr:hover td { background: var(--bg); }
     <div class="form-grid">
       <div class="form-row"><label>Volgend factuurnummer</label><input type="number" id="set-fnr" value="10"></div>
       <div class="form-row"><label>Betalingstermijn (dagen)</label><input type="number" id="set-termijn" value="14"></div>
-      <div class="form-row"><label>RMO uurtarief (€)</label><input type="number" id="set-rmo-tarief" step="0.01" value="30"></div>
-      <div class="form-row"><label>RMO km-vergoeding (€)</label><input type="number" id="set-rmo-km" step="0.01" value="0.25"></div>
+
       <div class="form-row"><label>BCC financieel pakket</label><input type="text" id="set-bcc" value="6y6b@verkoop.exactonline.nl"></div>
     </div>
     <button class="btn btn-primary" onclick="slaInstellingenOp()">Opslaan</button>
@@ -694,6 +693,7 @@ tr:hover td { background: var(--bg); }
     <div class="form-grid">
       <div class="form-row"><label>Standaard uurtarief (€)</label><input type="number" id="k-tarief" step="0.01"></div>
       <div class="form-row"><label>Standaard uren (bijv. kwartaal)</label><input type="number" id="k-std-uren" step="0.5" placeholder="bijv. 9"></div>
+      <div class="form-row"><label>Km-vergoeding (€, optioneel)</label><input type="number" id="k-kmtarief" step="0.01" placeholder="bijv. 0.25"></div>
     </div>
     <div class="form-row"><label>E-mail aanhef</label><input type="text" id="k-aanhef" placeholder="bijv. Hoi Sjoukje,"></div>
     <div class="form-row"><label>E-mail onderwerp template</label><input type="text" id="k-onderwerp" placeholder="bijv. Factuur {maand}"></div>
@@ -1355,7 +1355,7 @@ function updateInvoerType() {
   if(k.type==='rmo') {
     document.getElementById('rmo-datum').value = vandaag;
     document.getElementById('rmo-tarief').value = k.tarief || instellingen.rmo_tarief;
-    document.getElementById('rmo-km-tarief').value = k.kmtarief || instellingen.rmo_km;
+    document.getElementById('rmo-km-tarief').value = k.kmtarief || 0.25;
   }
   if(k.type==='uren') {
     document.getElementById('uren-tarief').value = k.tarief;
@@ -2145,8 +2145,8 @@ function agendaRegelOpslaan(idx, datum, rmo) {
     id: uid(), klantId: 'k1', type: 'rmo',
     aangemaaktOp: new Date().toISOString(),
     datum, opstap: rmo, uren,
-    km: 0, tarief: k?.tarief||instellingen.rmo_tarief||30,
-    kmtarief: k?.kmtarief||instellingen.rmo_km||0.25,
+    km: 0, tarief: k?.tarief||30,
+    kmtarief: k?.kmtarief||0.25,
     opmerking: '', btw: 21
   };
   regels.push(regel);
@@ -2169,8 +2169,8 @@ function agendaAllesOpslaan(ritten) {
         id: uid(), klantId: 'k1', type: 'rmo',
         aangemaaktOp: new Date().toISOString(),
         datum: r.datum, opstap: r.rmo, uren,
-        km: 0, tarief: k?.tarief||instellingen.rmo_tarief||30,
-        kmtarief: k?.kmtarief||instellingen.rmo_km||0.25,
+        km: 0, tarief: k?.tarief||30,
+        kmtarief: k?.kmtarief||0.25,
         opmerking: '', btw: 21
       });
     }
@@ -2269,6 +2269,8 @@ function openKlantModal(id) {
   if(mt) mt.value = k?.mailtekst||'';
   const su = document.getElementById('k-std-uren');
   if(su) su.value = k?.stdUren||'';
+  const km = document.getElementById('k-kmtarief');
+  if(km) km.value = k?.kmtarief||'';
   openModal('modal-klant');
 }
 
@@ -2378,7 +2380,7 @@ function renderInstellingen() {
   set('set-tel', ins.tel); set('set-iban', ins.iban); set('set-btw', ins.btwnr);
   set('set-kvk', ins.kvk); set('set-email', ins.email);
   set('set-fnr', ins.volgend_nr); set('set-termijn', ins.termijn);
-  set('set-rmo-tarief', ins.rmo_tarief); set('set-rmo-km', ins.rmo_km);
+
   set('set-bcc', ins.bcc);
 }
 
@@ -2395,8 +2397,7 @@ function slaInstellingenOp() {
     email: g('set-email') || 'gert@turns.nl',
     volgend_nr: parseInt(g('set-fnr'))||instellingen.volgend_nr||22,
     termijn: parseInt(g('set-termijn'))||14,
-    rmo_tarief: parseFloat(g('set-rmo-tarief'))||30,
-    rmo_km: parseFloat(g('set-rmo-km'))||0.25,
+
     bcc: g('set-bcc') || '6y6b@verkoop.exactonline.nl'
   });
   sla(); toast('Instellingen opgeslagen');
