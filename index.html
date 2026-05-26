@@ -2003,15 +2003,17 @@ function printFactuur(id) {
   const f = facturen.find(x=>x.id===id);
   if(!f) return;
   const k = klanten.find(x=>x.id===f.klantId);
-  const naam = 'Factuur_'+(f.nummer==='concept'?'concept':f.nummer)+'_'+(k?.naam||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const klantKort = {'k1':'Van_der_Heide','k2':'Echtemensen','k3':'Holding','k4':'Lieneke','k5':'Freulesjongers'};
+  const naam = 'Factuur_'+(f.nummer==='concept'?'concept':f.nummer)+'_'+(klantKort[f.klantId]||((k?.naam||'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'')));
   const html = bouwFactuurHTML(id);
   const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+naam+'</title>' +
     '<style>' +
-    '@page{size:A4;margin:15mm 18mm}' +
-    'body{margin:0;padding:0;font-family:Arial,sans-serif;font-size:11pt;color:#1a1916}' +
+    '@page{size:A4;margin:15mm 18mm;margin-top:15mm}' +
+    'body{margin:0;padding:0;font-family:Arial,sans-serif;font-size:11pt;color:#1a1916;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     'div{max-width:100%}' +
     '</style>' +
+    '<style media="print">@page{margin:15mm 18mm}</style>' +
     '</head><body>'+html+'<scri'+'pt>window.onload=function(){window.print();}</scri'+'pt></body></html>');
   w.document.close();
 }
