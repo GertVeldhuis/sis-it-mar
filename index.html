@@ -1654,6 +1654,7 @@ function renderFacturen() {
           <button class="btn btn-sm" onclick="openMailModal('${f.id}')">✉️</button>
           <button class="btn btn-sm" onclick="bekijkFactuur('${f.id}')">👁</button>
           ${f.status==='concept'?`<button class="btn btn-sm btn-primary" onclick="markeerVerstuurd('${f.id}')">Verstuurd</button>`:''}
+        ${f.status==='concept'?`<button class="btn btn-sm btn-danger" onclick="verwijderFactuur('${f.id}')">✕</button>`:''}
         </div>
       </td>
     </tr>`).join('')}
@@ -2105,6 +2106,19 @@ function printFactuur(id) {
 
 function downloadPDF(id) {
   printFactuur(id);
+}
+
+function verwijderFactuur(id) {
+  const f = facturen.find(x=>x.id===id);
+  if(!f) return;
+  if(f.status !== 'concept') return alert('Alleen concept-facturen kunnen worden verwijderd.');
+  if(!confirm('Factuur verwijderen? De bijbehorende regels komen terug als openstaand.')) return;
+  regels.forEach(r => { if(r.factuurId === id) delete r.factuurId; });
+  facturen = facturen.filter(x=>x.id!==id);
+  sla();
+  renderFacturen();
+  renderDashboard();
+  toast('Factuur verwijderd');
 }
 
 function markeerVerstuurd(id) {
