@@ -495,6 +495,10 @@ tr:hover td { background: var(--bg); }
       <p class="text-sm text-muted mb-1">Uren — totaal invoeren</p>
       <div class="form-grid">
         <div class="form-row">
+          <label>Datum</label>
+          <input type="date" id="uren-datum">
+        </div>
+        <div class="form-row">
           <label>Periode</label>
           <input type="text" id="uren-periode" placeholder="bijv. april 2026">
         </div>
@@ -1408,6 +1412,7 @@ function updateInvoerType() {
     const nu = new Date(); const mnd = nu.toLocaleString('nl',{month:'long'})+' '+nu.getFullYear();
     document.getElementById('uren-periode').value = mnd;
     document.getElementById('uren-omschrijving').value = 'Gemaakte uren '+mnd;
+    document.getElementById('uren-datum').value = nu.toISOString().split('T')[0];
   }
   if(k.type==='vrij') {
     document.getElementById('vrij-datum').value = vandaag;
@@ -1449,6 +1454,7 @@ function slaRegelOp() {
     const reisUren = reisUrenCb?.checked ? parseFloat(document.getElementById('uren-reis-uren').value)||0 : 0;
     const reisKm = reisKmCb?.checked ? parseFloat(document.getElementById('uren-reis-km').value)||0 : 0;
     Object.assign(regel, {
+      datum: document.getElementById('uren-datum').value,
       periode: document.getElementById('uren-periode').value,
       omschrijving: document.getElementById('uren-omschrijving').value,
       aantal, tarief,
@@ -1526,6 +1532,7 @@ function bewerkRegel(id) {
   } else if(r.type==='uren') {
     body.innerHTML = `
       <div class="form-grid">
+        <div class="form-row"><label>Datum</label><input type="date" id="br-datum" value="${r.datum||''}"></div>
         <div class="form-row"><label>Periode</label><input type="text" id="br-periode" value="${r.periode||''}"></div>
         <div class="form-row"><label>Aantal uren</label><input type="number" id="br-aantal" step="0.5" value="${r.aantal}"></div>
         <div class="form-row"><label>Tarief (€/uur)</label><input type="number" id="br-tarief" step="0.01" value="${r.tarief}"></div>
@@ -1562,6 +1569,7 @@ function slaRegelBewerkOp() {
     r.kmtarief = parseFloat(g('br-kmtarief'))||r.kmtarief;
     r.opmerking = g('br-opmerking')||'';
   } else if(r.type==='uren') {
+    r.datum = g('br-datum')||r.datum;
     r.periode = g('br-periode')||r.periode;
     r.omschrijving = g('br-omschr')||r.omschrijving;
     r.aantal = parseFloat(g('br-aantal'))||r.aantal;
@@ -1799,12 +1807,14 @@ function regelNaarFactuurRegel(r) {
     // Geef eerste regel terug maar voeg extra regels toe via meerdere returns
     return regels;
   } else if(r.type==='uren') {
-    const regels = [{ omschrijving: r.omschrijving, bedrag: r.tarief, aantal: r.aantal, subtotaal: r.tarief*r.aantal, btw: r.btw }];
+    const omschrAangevuld = r.datum ? r.omschrijving + ' (' + nlDatum(r.datum) + ')' : r.omschrijving;
+    const regels = [{ omschrijving: omschrAangevuld, bedrag: r.tarief, aantal: r.aantal, subtotaal: r.tarief*r.aantal, btw: r.btw, rawDatum: r.datum }];
     if(r.reisUren > 0) { const rut = r.reisUrenTarief||r.tarief; regels.push({ omschrijving: `Reisuren ${r.periode||''}`, bedrag: rut, aantal: r.reisUren, subtotaal: r.reisUren*rut, btw: r.btw }); }
     if(r.reisKm > 0) regels.push({ omschrijving: `Reiskosten ${r.periode||''}`, bedrag: 0.25, aantal: r.reisKm, subtotaal: r.reisKm*0.25, btw: r.btw });
     return regels;
   } else {
-    return { omschrijving: r.omschrijving, bedrag: r.bedrag, aantal: r.aantal, subtotaal: r.bedrag*r.aantal, btw: r.btw, opmerking: r.opmerking };
+    const omschrVrij = r.datum ? r.omschrijving + ' (' + nlDatum(r.datum) + ')' : r.omschrijving;
+    return { omschrijving: omschrVrij, bedrag: r.bedrag, aantal: r.aantal, subtotaal: r.bedrag*r.aantal, btw: r.btw, opmerking: r.opmerking, rawDatum: r.datum };
   }
 }
 
