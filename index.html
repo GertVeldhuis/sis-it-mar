@@ -665,15 +665,28 @@ tr:hover td { background: var(--bg); }
   </div>
   <div class="card">
     <div class="card-header"><span class="card-title">Automatische backup</span></div>
+    <div style="font-size:13px;color:var(--accent);margin-bottom:0.75rem">
+      ✓ Cloud-backup actief — elke dag wordt automatisch een kopie bewaard. Geen instellen nodig.
+    </div>
     <div class="flex gap-3" style="flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="koppelBackupMap()">📁 Koppel backup-map</button>
-      <button class="btn" onclick="maakBackup(true);schrijfAppBestanden()">💾 Backup nu</button>
-      <button class="btn" onclick="herstelBackup()">↩ Herstel backup</button>
+      <button class="btn btn-primary" onclick="toonCloudBackups()">🕓 Bekijk cloud-backups</button>
+      <button class="btn" onclick="cloudDagBackupNu()">☁️ Backup nu</button>
     </div>
-    <div id="backup-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
-      Geen backup-map gekoppeld.
-    </div>
-    <p class="text-sm text-muted mt-1">31 dagelijkse slots, roterend. Koppel een map in iCloud Drive of Dropbox.</p>
+    <div id="cloud-backup-lijst" style="margin-top:0.75rem"></div>
+    <details style="margin-top:1rem">
+      <summary style="cursor:pointer;font-size:13px;color:var(--muted)">Extra: lokale backup-map (optioneel)</summary>
+      <div style="margin-top:0.75rem">
+        <div class="flex gap-3" style="flex-wrap:wrap">
+          <button class="btn" onclick="koppelBackupMap()">📁 Koppel backup-map</button>
+          <button class="btn" onclick="maakBackup(true);schrijfAppBestanden()">💾 Backup nu</button>
+          <button class="btn" onclick="herstelBackup()">↩ Herstel uit map</button>
+        </div>
+        <div id="backup-status" style="font-size:13px;color:var(--muted);margin-top:0.5rem">
+          Geen backup-map gekoppeld.
+        </div>
+        <p class="text-sm text-muted mt-1">Schrijft ook de app zelf + README naar de map (iCloud/Dropbox).</p>
+      </div>
+    </details>
   </div>
 
 </div>
@@ -1276,6 +1289,24 @@ async function laadVanCloud() {
   return false;
 }
 
+async function cloudDagBackup() {
+  // Eén keer per dag een gedateerde kopie in de cloud bewaren
+  const vandaag = new Date().toISOString().split('T')[0];
+  if(localStorage.getItem('sim_cloud_backup_dag') === vandaag) return;
+  try {
+    const data = JSON.stringify({ klanten, regels, facturen, instellingen, _backup: new Date().toISOString() });
+    const resp = await fetch(WORKER_URL + '/backup?datum=' + vandaag, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: data
+    });
+    if(resp.ok) {
+      localStorage.setItem('sim_cloud_backup_dag', vandaag);
+      console.log('Cloud-backup gemaakt voor', vandaag);
+    }
+  } catch(e) { console.warn('Cloud-backup fout:', e); }
+}
+
 // ════════════════════════════════════════════════
 // NAV
 // ════════════════════════════════════════════════
@@ -1300,13 +1331,7 @@ function renderPage(name) {
 // DASHBOARD
 // ════════════════════════════════════════════════
 function renderDashboard() {
-  // Waarschuwing als backup-map niet gekoppeld
-  if(!backupDirHandle) {
-    clearTimeout(window._backupWarnTimer);
-    window._backupWarnTimer = setTimeout(() => {
-      if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
-    }, 2000);
-  }
+  // Cloud-backup is de standaard; lokale map is optioneel — geen waarschuwing meer
   const openRegels = regels.filter(r => !r.factuurId);
   const totaalOpen = openRegels.reduce((s,r) => s + berekenBedrag(r), 0);
   const jaar = new Date().getFullYear();
@@ -2435,6 +2460,56 @@ async function laadEnSync() {
   }
 }
 
+async function cloudDagBackupNu() {
+  localStorage.removeItem('sim_cloud_backup_dag');
+  toast('Bezig met cloud-backup...');
+  await cloudDagBackup();
+  toast('✓ Cloud-backup gemaakt');
+  toonCloudBackups();
+}
+
+async function toonCloudBackups() {
+  const el = document.getElementById('cloud-backup-lijst');
+  if(!el) return;
+  el.innerHTML = '<span style="font-size:13px;color:var(--muted)">Laden...</span>';
+  try {
+    const resp = await fetch(WORKER_URL + '/backups');
+    const lijst = await resp.json();
+    if(!lijst || !lijst.length) {
+      el.innerHTML = '<span style="font-size:13px;color:var(--muted)">Nog geen cloud-backups.</span>';
+      return;
+    }
+    el.innerHTML = '<div style="font-size:13px;font-weight:500;margin-bottom:0.4rem">Beschikbare backups:</div>' +
+      lijst.sort().reverse().map(datum =>
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:13.5px">' + datum + '</span>' +
+        '<button class="btn btn-sm" onclick="herstelCloudBackup(\'' + datum + '\')">↩ Herstel</button>' +
+        '</div>'
+      ).join('');
+  } catch(e) {
+    el.innerHTML = '<span style="font-size:13px;color:var(--danger)">Kon backups niet laden.</span>';
+  }
+}
+
+async function herstelCloudBackup(datum) {
+  if(!confirm('Backup van ' + datum + ' terugzetten? De huidige data wordt overschreven.')) return;
+  try {
+    const resp = await fetch(WORKER_URL + '/backup?datum=' + datum);
+    const data = await resp.json();
+    if(data && data.klanten) {
+      verwerkData(data);
+      sla();
+      renderDashboard();
+      renderFacturen && renderFacturen();
+      toast('✓ Backup ' + datum + ' teruggezet');
+    } else {
+      toast('Backup leeg of niet gevonden');
+    }
+  } catch(e) {
+    toast('Fout bij herstellen');
+  }
+}
+
 function voegMissendeFacturenToe() {
   let toegevoegd = 0;
   if(!facturen.find(f => f.nummer === '2026011')) {
@@ -2495,6 +2570,7 @@ function renderInstellingen() {
   set('set-fnr', ins.volgend_nr); set('set-termijn', ins.termijn);
 
   set('set-bcc', ins.bcc);
+  toonCloudBackups();
 }
 
 function slaInstellingenOp() {
@@ -2947,12 +3023,10 @@ async function init() {
     renderDashboard();
     // Probeer op achtergrond cloud te laden (nieuwere data)
     laadVanCloud().then(ok => { if(ok) { renderDashboard(); } });
-    // Dagelijkse backup
+    // Dagelijkse backup (lokale map + cloud)
     setTimeout(() => maakBackup(), 3000);
-    // Seintje als backup-map niet gekoppeld is
-    setTimeout(() => {
-      if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
-    }, 4000);
+    setTimeout(() => cloudDagBackup(), 5000);
+
   } else {
     // Probeer cloud te laden
     document.getElementById('welkom-scherm').style.display = 'none';
@@ -2962,9 +3036,8 @@ async function init() {
       if(ok) {
         renderDashboard();
         toast('✓ Data geladen uit cloud');
-        setTimeout(() => {
-          if(!backupDirHandle) toastWaarschuwing('⚠️ Backup-map niet gekoppeld — stel in via Instellingen');
-        }, 3000);
+        setTimeout(() => cloudDagBackup(), 5000);
+
       } else {
         document.getElementById('welkom-scherm').style.display = 'flex';
         document.getElementById('hoofd-app').style.display = 'none';
