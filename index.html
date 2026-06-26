@@ -2067,12 +2067,12 @@ function bouwFactuurHTML(id) {
     '</tr>'
   ).join('');
 
-  const regelRijen = f.regels.filter(r=>r.subtotaal>0||r.aantal>0).map(r=>
-    '<tr>' +
-    '<td style="padding:8px;border-bottom:1px solid #ebe9e1">'+r.omschrijving+(r.opmerking?'<br><span style="font-size:9pt;color:#888">'+r.opmerking+'</span>':'')+'</td>' +
-    '<td style="text-align:right;padding:8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">'+r.aantal+'</td>' +
-    '<td style="text-align:right;padding:8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">€ '+fmt(r.bedrag)+'</td>' +
-    '<td style="text-align:right;padding:8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">€ '+fmt(r.subtotaal)+'</td>' +
+  const regelRijen = f.regels.filter(r=>r.subtotaal>0||r.aantal>0).map((r,i)=>
+    '<tr style="background:'+(i%2?'#faf9f6':'#ffffff')+'">' +
+    '<td style="padding:9px 8px;border-bottom:1px solid #ebe9e1">'+r.omschrijving+(r.opmerking?'<br><span style="font-size:9pt;color:#888">'+r.opmerking+'</span>':'')+'</td>' +
+    '<td style="text-align:right;padding:9px 8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">'+r.aantal+'</td>' +
+    '<td style="text-align:right;padding:9px 8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">€ '+fmt(r.bedrag)+'</td>' +
+    '<td style="text-align:right;padding:9px 8px;border-bottom:1px solid #ebe9e1;white-space:nowrap">€ '+fmt(r.subtotaal)+'</td>' +
     '</tr>'
   ).join('');
 
@@ -2092,7 +2092,7 @@ function bouwFactuurHTML(id) {
     '</td>' +
   '</tr></table>' +
 
-  '<div style="margin-bottom:36px">' +
+  '<div style="margin-bottom:44px">' +
     '<div style="font-size:8pt;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Factuur voor</div>' +
     '<div style="font-weight:700;font-size:11.5pt">'+(k?.naam||'')+'</div>' +
     (k?.contact?'<div style="font-size:10pt;color:#555;margin-top:2px">t.a.v. '+k.contact+'</div>':'') +
@@ -2117,10 +2117,15 @@ function bouwFactuurHTML(id) {
     '</tfoot>' +
   '</table>' +
 
+  '<div style="margin-top:28px;padding:14px 16px;background:#f4f7f5;border-left:3px solid #1a5c3a;border-radius:3px">' +
+    '<div style="font-size:10pt;color:#1a1916">Gelieve het totaalbedrag van <strong>€ '+fmt(f.totaal)+'</strong> te voldoen vóór <strong>'+nlDatum(f.vervaldatum)+'</strong></div>' +
+    '<div style="font-size:10pt;color:#1a1916;margin-top:4px">op rekening <strong>'+insIban+'</strong> t.n.v. '+insNaam+(f.nummer!=='concept'?' o.v.v. factuurnummer '+f.nummer:'')+'.</div>' +
+  '</div>' +
+
   (f.opmerking?'<div style="font-size:10pt;color:#666;margin-top:20px;padding:12px 0;border-top:1px solid #ebe9e1">'+f.opmerking+'</div>':'') +
 
   '<div style="position:fixed;bottom:12mm;left:18mm;right:18mm;border-top:1px solid #ddd;padding-top:8px;font-size:8.5pt;color:#999;text-align:center">' +
-    'Rekeningnummer '+insIban+' — BTW nummer: '+insBtwnr+' — KvK '+insKvk +
+    insNaam+' — IBAN '+insIban+' — BTW '+insBtwnr+' — KvK '+insKvk +
   '</div>';
 }
 
