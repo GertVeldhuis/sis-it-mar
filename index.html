@@ -895,6 +895,12 @@ async function probeerInloggen() {
   statusEl.textContent = 'Controleren...';
   try {
     const resp = await fetch(WORKER_URL + '/data', { headers: { 'X-Auth-Token': code } });
+    if (resp.status === 429) {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Te veel mislukte pogingen vanaf dit netwerk. Probeer het over ongeveer een kwartier opnieuw.';
+      btn.disabled = false;
+      return;
+    }
     if (resp.status === 401 || resp.status === 403) {
       statusEl.style.color = 'var(--danger)';
       statusEl.textContent = 'Onjuiste toegangscode.';
