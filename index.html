@@ -376,6 +376,16 @@ tr:hover td { background: var(--bg); }
 
 <!-- NAV -->
 <div id="print-container" style="display:none"></div>
+<div id="login-scherm" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
+  <div style="font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent)">Sis it Mar</div>
+  <div style="font-size:18px;font-weight:500">Inloggen</div>
+  <div id="login-sub" style="color:var(--muted);font-size:14px;text-align:center;max-width:320px">Voer de toegangscode in om verder te gaan.</div>
+  <div style="display:flex;flex-direction:column;gap:0.75rem;width:280px">
+    <input id="login-wachtwoord" type="password" placeholder="Toegangscode" autocomplete="current-password" style="padding:0.7rem 0.8rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;width:100%" onkeydown="if(event.key==='Enter')probeerInloggen()">
+    <button id="login-btn" class="btn btn-primary" style="justify-content:center;padding:0.75rem" onclick="probeerInloggen()">🔓 Inloggen</button>
+    <div id="login-status" style="font-size:13px;color:var(--danger);text-align:center;min-height:18px"></div>
+  </div>
+</div>
 <div id="welkom-scherm" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
   <div style="font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent)">Sis it Mar</div>
   <div id="welkom-titel" style="font-size:18px;font-weight:500">Welkom</div>
@@ -386,7 +396,7 @@ tr:hover td { background: var(--bg); }
     <button class="btn" style="justify-content:center;padding:0.75rem" onclick="document.getElementById('welkom-scherm').style.display='none';document.getElementById('hoofd-app').style.display='block';laad();renderDashboard()">⚡ Gebruik lokale data</button>
   </div>
 </div>
-<div id="hoofd-app" style="display:block">
+<div id="hoofd-app" style="display:none">
 <nav id="nav">
   <div class="logo">Sis it Mar</div>
   <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
@@ -692,6 +702,13 @@ tr:hover td { background: var(--bg); }
       </div>
     </details>
   </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Beveiliging</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:0.75rem">
+      Toegang tot deze app en de cloud-data is beveiligd met een toegangscode.
+    </div>
+    <button class="btn" onclick="uitloggen()">🔒 Uitloggen</button>
+  </div>
 
 </div>
 
@@ -852,7 +869,72 @@ let saveTimeout = null;
 const DB_NAME = 'SisItMarDB';
 const STORE_NAME = 'handles';
 const WORKER_URL = 'https://sis-it-mar-sync.gert-c5c.workers.dev';
+const AUTH_KEY = 'sim_auth_token';
 let syncTimeout = null;
+
+// ════════════════════════════════════════════════
+// AUTHENTICATIE
+// ════════════════════════════════════════════════
+// De Worker controleert bij élke request de header X-Auth-Token tegen
+// een geheim dat alleen in de Worker (Cloudflare secret) bekend is.
+// Zonder geldige token weigert de Worker — dit scherm is dus geen
+// versiering maar de échte poort naar de cloud-data.
+function authHeaders(extra) {
+  const token = localStorage.getItem(AUTH_KEY) || '';
+  return Object.assign({ 'X-Auth-Token': token }, extra || {});
+}
+
+async function probeerInloggen() {
+  const veld = document.getElementById('login-wachtwoord');
+  const code = veld.value;
+  const statusEl = document.getElementById('login-status');
+  const btn = document.getElementById('login-btn');
+  if (!code) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = 'Voer een toegangscode in.'; return; }
+  btn.disabled = true;
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = 'Controleren...';
+  try {
+    const resp = await fetch(WORKER_URL + '/data', { headers: { 'X-Auth-Token': code } });
+    if (resp.status === 401 || resp.status === 403) {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Onjuiste toegangscode.';
+      btn.disabled = false;
+      return;
+    }
+    if (!resp.ok) {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Kon niet verbinden met de server (status ' + resp.status + ').';
+      btn.disabled = false;
+      return;
+    }
+    localStorage.setItem(AUTH_KEY, code);
+    veld.value = '';
+    document.getElementById('login-scherm').style.display = 'none';
+    startApp();
+  } catch (e) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Geen verbinding — de eerste keer inloggen vereist internet.';
+    btn.disabled = false;
+  }
+}
+
+function toonLoginScherm(bericht) {
+  localStorage.removeItem(AUTH_KEY);
+  document.getElementById('hoofd-app').style.display = 'none';
+  document.getElementById('welkom-scherm').style.display = 'none';
+  const sub = document.getElementById('login-sub');
+  if (sub) sub.textContent = bericht || 'Voer de toegangscode in om verder te gaan.';
+  const status = document.getElementById('login-status');
+  if (status) status.textContent = '';
+  const btn = document.getElementById('login-btn');
+  if (btn) btn.disabled = false;
+  document.getElementById('login-scherm').style.display = 'flex';
+}
+
+function uitloggen() {
+  if (!confirm('Weet je zeker dat je wilt uitloggen? Lokale data blijft op dit apparaat staan.')) return;
+  toonLoginScherm('Voer de toegangscode in om verder te gaan.');
+}
 
 const DEFAULTS = {
   klanten: [
@@ -1271,18 +1353,20 @@ function syncNaarCloud() {
   syncTimeout = setTimeout(async () => {
     try {
       const data = JSON.stringify({ klanten, regels, facturen, instellingen });
-      await fetch(WORKER_URL + '/data', {
+      const resp = await fetch(WORKER_URL + '/data', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: data
       });
+      if(resp.status === 401 || resp.status === 403) toonLoginScherm('Toegangscode is niet meer geldig. Log opnieuw in.');
     } catch(e) { console.warn('Cloud sync fout:', e); }
   }, 1000);
 }
 
 async function laadVanCloud() {
   try {
-    const resp = await fetch(WORKER_URL + '/data');
+    const resp = await fetch(WORKER_URL + '/data', { headers: authHeaders() });
+    if(resp.status === 401 || resp.status === 403) { toonLoginScherm('Toegangscode is niet meer geldig. Log opnieuw in.'); return false; }
     const data = await resp.json();
     if(data && data.klanten) {
       verwerkData(data);
@@ -1301,7 +1385,7 @@ async function cloudDagBackup() {
     const data = JSON.stringify({ klanten, regels, facturen, instellingen, _backup: new Date().toISOString() });
     const resp = await fetch(WORKER_URL + '/backup?datum=' + vandaag, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: data
     });
     if(resp.ok) {
@@ -2482,7 +2566,8 @@ async function toonCloudBackups() {
   if(!el) return;
   el.innerHTML = '<span style="font-size:13px;color:var(--muted)">Laden...</span>';
   try {
-    const resp = await fetch(WORKER_URL + '/backups');
+    const resp = await fetch(WORKER_URL + '/backups', { headers: authHeaders() });
+    if(resp.status === 401 || resp.status === 403) { toonLoginScherm('Toegangscode is niet meer geldig. Log opnieuw in.'); return; }
     const lijst = await resp.json();
     if(!lijst || !lijst.length) {
       el.innerHTML = '<span style="font-size:13px;color:var(--muted)">Nog geen cloud-backups.</span>';
@@ -2503,7 +2588,8 @@ async function toonCloudBackups() {
 async function herstelCloudBackup(datum) {
   if(!confirm('Backup van ' + datum + ' terugzetten? De huidige data wordt overschreven.')) return;
   try {
-    const resp = await fetch(WORKER_URL + '/backup?datum=' + datum);
+    const resp = await fetch(WORKER_URL + '/backup?datum=' + datum, { headers: authHeaders() });
+    if(resp.status === 401 || resp.status === 403) { toonLoginScherm('Toegangscode is niet meer geldig. Log opnieuw in.'); return; }
     const data = await resp.json();
     if(data && data.klanten) {
       verwerkData(data);
@@ -3093,7 +3179,17 @@ function verwerkStartup() {
   }
 }
 
-init();
+function startApp() {
+  init();
+}
+
+// Bij een eerder geslaagde login staat de toegangscode al lokaal opgeslagen
+// (bevestigd door de Worker) — dan direct doorstarten. Anders blijft het
+// inlogscherm (al standaard zichtbaar) staan tot probeerInloggen() slaagt.
+if (localStorage.getItem(AUTH_KEY)) {
+  document.getElementById('login-scherm').style.display = 'none';
+  startApp();
+}
 </script>
 </div><!-- /hoofd-app -->
 </body>
