@@ -643,6 +643,10 @@ tr:hover td { background: var(--bg); }
       <div class="form-row"><label>BCC financieel pakket</label><input type="text" id="set-bcc" value="6y6b@verkoop.exactonline.nl"></div>
     </div>
     <button class="btn btn-primary" onclick="slaInstellingenOp()">Opslaan</button>
+    <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="herstelAfrondingNu()">🔧 Herbereken BTW-afronding</button>
+      <span class="text-sm text-muted" style="margin-left:0.5rem">Corrigeert eventuele halve-cent verschillen op bestaande facturen.</span>
+    </div>
   </div>
 
   <div class="card">
@@ -2510,6 +2514,18 @@ async function herstelCloudBackup(datum) {
   }
 }
 
+function herstelAfrondingNu() {
+  const aangepast = herberekenBtwAfronding();
+  if(aangepast) {
+    sla();
+    renderFacturen();
+    renderDashboard();
+    toast('✓ BTW-afronding gecorrigeerd');
+  } else {
+    toast('Alle facturen klopten al');
+  }
+}
+
 function voegMissendeFacturenToe() {
   let toegevoegd = 0;
   if(!facturen.find(f => f.nummer === '2026011')) {
@@ -3047,7 +3063,7 @@ async function init() {
   }
 }
 
-function verwerkStartup() {
+function herberekenBtwAfronding() {
   // Herbereken BTW-afronding voor alle facturen (corrigeert halve-cent verschillen)
   let aangepast = false;
   facturen.forEach(f => {
@@ -3062,8 +3078,13 @@ function verwerkStartup() {
       aangepast = true;
     }
   });
-  if(aangepast) {
-    try { localStorage.setItem('sim_facturen', JSON.stringify(facturen)); } catch(e){}
+  return aangepast;
+}
+
+function verwerkStartup() {
+  if(herberekenBtwAfronding()) {
+    // Sla correcties op naar alle lagen (localStorage, bestand, cloud)
+    setTimeout(() => sla(), 100);
   }
 }
 
