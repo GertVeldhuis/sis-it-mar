@@ -1789,15 +1789,15 @@ function slaFactuurOp() {
   }
   if(!factuurRegels.length) return alert('Geen regels geselecteerd');
 
-  const sub = factuurRegels.reduce((s,r)=>s+r.subtotaal,0);
+  const sub = round2(factuurRegels.reduce((s,r)=>s+r.subtotaal,0));
   // BTW per tarief
   const btwGroepen = {};
   factuurRegels.forEach(r=>{
     if(!btwGroepen[r.btw]) btwGroepen[r.btw]=0;
     btwGroepen[r.btw]+=r.subtotaal;
   });
-  const btwBedrag = Object.entries(btwGroepen).reduce((s,[pct,amt])=>s+(amt*pct/100),0);
-  const totaal = sub + btwBedrag;
+  const btwBedrag = Object.entries(btwGroepen).reduce((s,[pct,amt])=>s+round2(amt*pct/100),0);
+  const totaal = round2(sub + btwBedrag);
 
   const f = {
     id: uid(), nummer, klantId: kid, factuurdatum: datum, vervaldatum: verval,
@@ -2031,11 +2031,11 @@ function slaBewerktOp() {
   }
 
   f.regels = nieuweRegels;
-  const sub = nieuweRegels.reduce((s,r)=>s+r.subtotaal,0);
+  const sub = round2(nieuweRegels.reduce((s,r)=>s+r.subtotaal,0));
   const btwGroepen = {};
   nieuweRegels.forEach(r=>{ if(!btwGroepen[r.btw]) btwGroepen[r.btw]=0; btwGroepen[r.btw]+=r.subtotaal; });
-  const btwBedrag = Object.entries(btwGroepen).reduce((s,[p,a])=>s+(a*p/100),0);
-  f.subtotaal = sub; f.btwGroepen = btwGroepen; f.btwBedrag = btwBedrag; f.totaal = sub+btwBedrag;
+  const btwBedrag = Object.entries(btwGroepen).reduce((s,[p,a])=>s+round2(a*p/100),0);
+  f.subtotaal = sub; f.btwGroepen = btwGroepen; f.btwBedrag = btwBedrag; f.totaal = round2(sub+btwBedrag);
 
   sla();
   sluitModal('modal-factuur');
@@ -2777,6 +2777,7 @@ function regelOmschrijving(r) {
 function klantNaam(id) { return klanten.find(k=>k.id===id)?.naam||id; }
 
 function fmt(n) { return (Math.round(n*100)/100).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function round2(n) { return Math.round(n*100)/100; }
 function nlDatum(d) { if(!d) return ''; const [y,m,dd]=d.split('-'); return `${dd}-${m}-${y}`; }
 
 function jaar() { return new Date().getFullYear(); }
@@ -3047,7 +3048,23 @@ async function init() {
 }
 
 function verwerkStartup() {
-  // Alle startup-logica (reeds in laad() verwerkt via localStorage fallback)
+  // Herbereken BTW-afronding voor alle facturen (corrigeert halve-cent verschillen)
+  let aangepast = false;
+  facturen.forEach(f => {
+    if(!f.btwGroepen || !f.regels) return;
+    const sub = round2(f.regels.reduce((s,r)=>s+(r.subtotaal||0),0));
+    const groepen = {};
+    f.regels.forEach(r=>{ const p=r.btw||21; if(!groepen[p]) groepen[p]=0; groepen[p]+=r.subtotaal||0; });
+    const btwBedrag = Object.entries(groepen).reduce((s,[p,a])=>s+round2(a*p/100),0);
+    const totaal = round2(sub + btwBedrag);
+    if(Math.abs((f.totaal||0)-totaal) >= 0.005 || Math.abs((f.btwBedrag||0)-btwBedrag) >= 0.005) {
+      f.subtotaal = sub; f.btwGroepen = groepen; f.btwBedrag = btwBedrag; f.totaal = totaal;
+      aangepast = true;
+    }
+  });
+  if(aangepast) {
+    try { localStorage.setItem('sim_facturen', JSON.stringify(facturen)); } catch(e){}
+  }
 }
 
 init();
