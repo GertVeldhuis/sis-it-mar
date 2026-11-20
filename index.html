@@ -624,48 +624,54 @@ tr:hover td { background: var(--bg); }
     <button class="btn btn-primary" onclick="openOfferteForm()">+ Nieuwe offerte</button>
   </div>
 
-  <div class="card" id="of-form-card" style="display:none">
+  <div class="card" id="of-form-card" style="display:none" oninput="offerteRekenLive()" onchange="offerteRekenLive()">
     <div class="card-header">
       <span class="card-title" id="of-form-titel">Nieuwe offerte</span>
       <button class="btn btn-sm" onclick="sluitOfferteForm()">Annuleren</button>
     </div>
 
-    <div class="form-grid">
-      <div class="form-row">
-        <label>Klant</label>
-        <select id="of-klant" onchange="offerteKlantWissel()"></select>
+    <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p style="font-weight:600;margin:0 0 0.7rem;font-size:14.5px">1 · Klant en rit</p>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Klant</label>
+          <select id="of-klant" onchange="offerteKlantWissel()"></select>
+        </div>
+        <div class="form-row" id="of-klantnaam-rij">
+          <label>Naam klant</label>
+          <input type="text" id="of-klantnaam" placeholder="Naam of organisatie">
+        </div>
       </div>
-      <div class="form-row" id="of-klantnaam-rij">
-        <label>Naam klant</label>
-        <input type="text" id="of-klantnaam" placeholder="Naam of organisatie">
+      <div class="form-row">
+        <label>Omschrijving rit</label>
+        <input type="text" id="of-omschrijving" placeholder="bijv. Schoolreisje Appelscha">
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Datum rit</label>
+          <input type="date" id="of-ritdatum">
+        </div>
+        <div class="form-row">
+          <label>Aantal personen</label>
+          <input type="number" id="of-r-personen" min="0" step="1">
+        </div>
+        <div class="form-row">
+          <label>Offertedatum</label>
+          <input type="date" id="of-datum">
+        </div>
+        <div class="form-row">
+          <label>Geldig (aantal dagen)</label>
+          <input type="number" id="of-geldig" min="1" step="1" value="30">
+        </div>
       </div>
       <div class="form-row">
-        <label>Offertedatum</label>
-        <input type="date" id="of-datum">
-      </div>
-      <div class="form-row">
-        <label>Geldig (aantal dagen)</label>
-        <input type="number" id="of-geldig" min="1" step="1" value="30">
+        <label>Opmerking (optioneel, komt op offerte en ritstaat)</label>
+        <input type="text" id="of-opmerking" placeholder="bijv. rolstoel aan boord">
       </div>
     </div>
 
-    <div class="form-row">
-      <label>Omschrijving rit</label>
-      <input type="text" id="of-omschrijving" placeholder="bijv. Busrit Roodhuis – Dokkum en terug">
-    </div>
-    <div class="form-grid">
-      <div class="form-row">
-        <label>Datum rit (optioneel)</label>
-        <input type="date" id="of-ritdatum">
-      </div>
-      <div class="form-row">
-        <label>Opmerking (optioneel)</label>
-        <input type="text" id="of-opmerking" placeholder="bijv. 46 personen">
-      </div>
-    </div>
-
-    <div style="margin:0.25rem 0 1.25rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
-      <p class="text-sm" style="font-weight:500;margin-bottom:0.6rem">Route</p>
+    <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p style="font-weight:600;margin:0 0 0.7rem;font-size:14.5px">2 · Route</p>
       <div class="form-grid">
         <div class="form-row">
           <label>Vertrek</label>
@@ -681,43 +687,54 @@ tr:hover td { background: var(--bg); }
         <input type="text" id="of-via" placeholder="bijv. Winsum; Oostmahorn">
       </div>
       <div class="flex gap-3" style="flex-wrap:wrap">
-        <button class="btn" id="of-route-btn" onclick="berekenRoute()">📍 Bereken km en reistijd</button>
+        <button class="btn" id="of-route-btn" onclick="berekenRoute()">📍 Bereken km</button>
         <button class="btn" onclick="openGoogleMaps()">🗺 Open in Google Maps</button>
       </div>
       <div id="of-route-status" class="text-sm text-muted" style="margin-top:0.6rem;min-height:18px"></div>
-      <p class="text-sm text-muted" style="margin-top:0.4rem">De berekening gebruikt OpenStreetMap (personenauto, zonder verkeer) en kan een paar procent afwijken van Google Maps. Je kunt km en uren hieronder altijd zelf overschrijven. De reisuren zijn altijd het totaal.</p>
-    </div>
-
-    <div class="form-grid">
-      <div class="form-row">
-        <label>Aantal dagen bus</label>
-        <input type="number" id="of-dagen" min="1" step="1" value="1" oninput="offerteRekenLive()">
-      </div>
-      <div class="form-row">
-        <label>Kilometers gelden</label>
-        <select id="of-perdag" onchange="offerteRekenLive()">
-          <option value="dag">per dag (× aantal dagen)</option>
-          <option value="totaal">voor de hele rit (niet × dagen)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Kilometers (enkele rit, zoals de route ze toont)</label>
+      <div class="form-row" style="margin-top:0.4rem;max-width:320px">
+        <label>Kilometers (enkele rit)</label>
         <input type="number" id="of-km" min="0" step="0.1" oninput="offerteRekenLive()">
       </div>
-      <div class="form-row">
-        <label>Reisuren (totaal, wordt niet vermenigvuldigd)</label>
-        <input type="number" id="of-uren" min="0" step="0.05" oninput="offerteRekenLive()">
-      </div>
-    </div>
-    <div class="form-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text)">
-        <input type="checkbox" id="of-retour" onchange="offerteRekenLive()" style="width:auto">
-        Retour: dezelfde route ook terug rijden (kilometers × 2)
-      </label>
+      <p class="text-sm text-muted" style="margin-top:0.2rem">De routehulp gebruikt OpenStreetMap (personenauto, zonder verkeer) en kan een paar procent afwijken van Google Maps. De kilometers kun je altijd zelf aanpassen.</p>
     </div>
 
-    <div style="margin:0.25rem 0 1.25rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
-      <p class="text-sm" style="font-weight:500;margin-bottom:0.6rem">Bus-tarieven (excl. BTW)</p>
+    <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p style="font-weight:600;margin:0 0 0.7rem;font-size:14.5px">3 · Tijden en reisuren</p>
+      <div class="form-grid">
+        <div class="form-row"><label>Vertrek garage</label><input type="time" id="of-r-vertrektijd"></div>
+        <div class="form-row"><label>Voorstaan klant</label><input type="time" id="of-r-voorstaan"></div>
+        <div class="form-row"><label>Terug in garage</label><input type="time" id="of-r-terug"></div>
+      </div>
+      <div id="of-uren-auto" class="text-sm" style="margin:0.2rem 0 0.8rem"></div>
+      <div class="form-row" style="max-width:320px">
+        <label>Reisuren zelf invullen (overschrijft de tijden)</label>
+        <input type="number" id="of-uren" min="0" step="0.05" oninput="offerteRekenLive()">
+      </div>
+      <p class="text-sm text-muted" style="margin-top:0.2rem">Laat dit veld leeg om de uren uit de tijden te halen (terug in garage min vertrek garage). Het ingevulde aantal uren is altijd het totaal.</p>
+    </div>
+
+    <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p style="font-weight:600;margin:0 0 0.7rem;font-size:14.5px">4 · Prijs</p>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Aantal dagen bus</label>
+          <input type="number" id="of-dagen" min="1" step="1" value="1" oninput="offerteRekenLive()">
+        </div>
+        <div class="form-row">
+          <label>Kilometers gelden</label>
+          <select id="of-perdag" onchange="offerteRekenLive()">
+            <option value="dag">per dag (× aantal dagen)</option>
+            <option value="totaal">voor de hele rit (niet × dagen)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text)">
+          <input type="checkbox" id="of-retour" onchange="offerteRekenLive()" style="width:auto">
+          Retour: dezelfde route ook terug rijden (kilometers × 2)
+        </label>
+      </div>
+      <p class="text-sm" style="font-weight:500;margin:0.4rem 0 0.5rem">Bus-tarieven (excl. BTW)</p>
       <div class="form-grid">
         <div class="form-row">
           <label>Huur bus per dag (€)</label>
@@ -736,47 +753,45 @@ tr:hover td { background: var(--bg); }
           <input type="number" id="of-opslag" min="0" step="1" value="0" oninput="offerteRekenLive()">
         </div>
       </div>
-      <button class="btn btn-sm" onclick="bewaarBusTarieven()">Bewaar als standaard voor nieuwe offertes</button>
+      <button class="btn btn-sm" onclick="bewaarBusTarieven()">Bewaar tarieven als standaard voor nieuwe offertes</button>
+
+      <p class="text-sm" style="font-weight:500;margin:1rem 0 0.5rem">Extra kosten (tol, parkeren, …)</p>
+      <div id="of-extra"></div>
+      <button class="btn btn-sm" onclick="offerteExtraToevoegen()">+ Extra post</button>
+
+      <div class="form-grid" style="margin-top:1rem">
+        <div class="form-row">
+          <label>BTW</label>
+          <select id="of-btw" onchange="offerteRekenLive()">
+            <option value="9">9%</option>
+            <option value="21">21%</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Op de offerte tonen</label>
+          <select id="of-spec">
+            <option value="1">Alle regels (huur, km, reisuren)</option>
+            <option value="0">Alleen het totaalbedrag</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <p class="text-sm" style="font-weight:500;margin-bottom:0.5rem">Extra kosten (tol, parkeren, …)</p>
-    <div id="of-extra"></div>
-    <button class="btn btn-sm" onclick="offerteExtraToevoegen()">+ Extra post</button>
-
-    <div class="form-grid" style="margin-top:1.25rem">
-      <div class="form-row">
-        <label>BTW</label>
-        <select id="of-btw" onchange="offerteRekenLive()">
-          <option value="9">9%</option>
-          <option value="21">21%</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Op de offerte tonen</label>
-        <select id="of-spec">
-          <option value="1">Alle regels (huur, km, reisuren)</option>
-          <option value="0">Alleen het totaalbedrag</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="margin:0.25rem 0 1.25rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
-      <p class="text-sm" style="font-weight:500;margin-bottom:0.2rem">Ritstaat voor de chauffeur (optioneel)</p>
-      <p class="text-sm text-muted" style="margin-bottom:0.6rem">Datum, route en opmerking komen uit de offerte. Er staan geen prijzen op de ritstaat. Sla de offerte op en klik in de lijst op “Ritstaat”.</p>
+    <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p style="font-weight:600;margin:0 0 0.2rem;font-size:14.5px">5 · Chauffeur en ritstaat</p>
+      <p class="text-sm text-muted" style="margin-bottom:0.7rem">Op de ritstaat staan geen prijzen. Datum, route, personen en tijden komen uit de offerte. Laat je hieronder iets leeg, dan wordt dit automatisch ingevuld: aard van de reis = omschrijving, adressen = vertrek, via en bestemming. Sla de offerte op en klik in de lijst op “Ritstaat”.</p>
       <div class="form-grid">
-        <div class="form-row"><label>Chauffeur</label><input type="text" id="of-r-chauffeur"></div>
+        <div class="form-row"><label>Chauffeur</label><input type="text" id="of-r-chauffeur" placeholder="leeg = Gert Veldhuis"></div>
         <div class="form-row"><label>Touringcar / bus</label><input type="text" id="of-r-voertuig" placeholder="bijv. Volvo touringcar"></div>
-        <div class="form-row"><label>Aantal personen</label><input type="number" id="of-r-personen" min="0" step="1"></div>
-        <div class="form-row"><label>Aard van de reis</label><input type="text" id="of-r-aard" placeholder="bijv. Personeelsreis"></div>
-        <div class="form-row"><label>Vertrektijd garage</label><input type="time" id="of-r-vertrektijd"></div>
-        <div class="form-row"><label>Voorstaan klant</label><input type="time" id="of-r-voorstaan"></div>
-        <div class="form-row"><label>Vertrek klant</label><input type="time" id="of-r-vertrekklant"></div>
+        <div class="form-row"><label>Aard van de reis</label><input type="text" id="of-r-aard" placeholder="leeg = omschrijving van de rit"></div>
       </div>
       <div class="form-row">
         <label>Adressen (één per regel)</label>
-        <textarea id="of-r-adressen" rows="3" style="width:100%;font-family:inherit;font-size:14px;padding:0.5rem 0.7rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);background:var(--surface);box-sizing:border-box" placeholder="bijv. Hotel Voorbeeld, Straat 1, 1234 AB Plaats"></textarea>
+        <textarea id="of-r-adressen" rows="3" style="width:100%;font-family:inherit;font-size:14px;padding:0.5rem 0.7rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);background:var(--surface);box-sizing:border-box" placeholder="leeg = vertrek, via en bestemming van de route"></textarea>
       </div>
     </div>
+
+    <div id="of-ontbreekt" style="margin:0 0 0.8rem;padding:0.7rem 1rem;border-radius:var(--radius-sm);font-size:14px"></div>
 
     <div id="of-resultaat" style="margin:0.5rem 0 1rem;padding:1rem 1.25rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);background:var(--accent-light)"></div>
 
@@ -2965,13 +2980,36 @@ function standplaatsAdres() {
 // 'retour' verdubbelt de km. 'perDag' = km gelden per dag (x aantal dagen).
 // De reisuren zijn altijd het TOTAAL dat de gebruiker invult: niet x retour, niet x dagen.
 // De opslag (standaard 0%) werkt alleen op de reisuren.
+function tijdNaarMin(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
+  if(!m) return null;
+  const h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+  return (h > 23 || mi > 59) ? null : h * 60 + mi;
+}
+
+// Reisuren uit de tijden: terug in garage min vertrek garage (terug 'eerder' dan vertrek = na middernacht).
+// Alleen voor een rit van één dag; bij meerdere dagen vult de gebruiker de uren zelf in.
+function urenUitTijden(o) {
+  if(Math.max(1, parseInt(o.dagen) || 1) > 1) return null;
+  const a = tijdNaarMin(o.ritVertrektijd), b = tijdNaarMin(o.ritTerug);
+  if(a === null || b === null) return null;
+  let d = b - a, overnacht = false;
+  if(d < 0) { d += 1440; overnacht = true; }
+  return { uren: round2(d / 60), overnacht };
+}
+
 function berekenOfferte(o) {
   const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
   const dagen = Math.max(0, num(o.dagen));
   const keer = o.retour ? 2 : 1;
   const mult = (o.perDag === 'totaal') ? 1 : dagen;
   const km = round2(num(o.km) * keer * mult);
-  const uren = round2(num(o.uren) * (1 + num(o.opslag)/100));
+  // Handmatig ingevulde reisuren gaan altijd voor; anders uit de tijden.
+  const handmatig = String(o.uren ?? '').trim() !== '';
+  const auto = handmatig ? null : urenUitTijden(o);
+  const basisUren = handmatig ? num(o.uren) : (auto ? auto.uren : 0);
+  const urenBron = handmatig ? 'handmatig' : (auto ? 'tijden' : 'leeg');
+  const uren = round2(basisUren * (1 + num(o.opslag)/100));
 
   const lijnen = [
     { soort:'huur',  omschrijving:'Huur bus',       aantal:dagen, eenheid: dagen === 1 ? 'dag' : 'dagen', bedrag:num(o.huur),     subtotaal:round2(dagen * num(o.huur)) },
@@ -2986,7 +3024,7 @@ function berekenOfferte(o) {
   const subtotaal = round2(lijnen.reduce((s,l) => s + l.subtotaal, 0));
   const btwPct = (o.btw === undefined || o.btw === null || o.btw === '') ? 9 : num(o.btw);
   const btwBedrag = round2(subtotaal * btwPct / 100);
-  return { lijnen, subtotaal, btwPct, btwBedrag, totaal: round2(subtotaal + btwBedrag), km, uren };
+  return { lijnen, subtotaal, btwPct, btwBedrag, totaal: round2(subtotaal + btwBedrag), km, uren, urenBron };
 }
 
 function offerteWaarschuwingen(o, r) {
@@ -3017,7 +3055,7 @@ function leesOfferteForm() {
     extra: _ofExtra.map(e => ({ omschrijving: e.omschrijving, bedrag: e.bedrag })),
     btw: v('of-btw'), spec: v('of-spec') !== '0',
     ritChauffeur: v('of-r-chauffeur').trim(), ritVoertuig: v('of-r-voertuig').trim(), ritPersonen: v('of-r-personen'), ritAard: v('of-r-aard').trim(),
-    ritVertrektijd: v('of-r-vertrektijd'), ritVoorstaan: v('of-r-voorstaan'), ritVertrekKlant: v('of-r-vertrekklant'), ritAdressen: v('of-r-adressen')
+    ritVertrektijd: v('of-r-vertrektijd'), ritVoorstaan: v('of-r-voorstaan'), ritTerug: v('of-r-terug'), ritAdressen: v('of-r-adressen')
   };
 }
 
@@ -3046,7 +3084,7 @@ function openOfferteForm(id) {
   set('of-spec', (o && o.spec === false) ? '0' : '1');
   set('of-r-chauffeur', o ? (o.ritChauffeur || '') : 'Gert Veldhuis'); set('of-r-voertuig', o?.ritVoertuig || ''); set('of-r-personen', o?.ritPersonen ?? '');
   set('of-r-aard', o?.ritAard || ''); set('of-r-vertrektijd', o?.ritVertrektijd || ''); set('of-r-voorstaan', o?.ritVoorstaan || '');
-  set('of-r-vertrekklant', o?.ritVertrekKlant || ''); set('of-r-adressen', o?.ritAdressen || '');
+  set('of-r-terug', o?.ritTerug || ''); set('of-r-adressen', o?.ritAdressen || '');
   _ofExtra = (o?.extra || []).map(e => ({ omschrijving: e.omschrijving || '', bedrag: e.bedrag }));
 
   const st = document.getElementById('of-route-status');
@@ -3110,6 +3148,62 @@ function offerteRekenLive() {
   html += '</table>';
   if(w.length) html += '<div style="margin-top:0.6rem;font-size:13px;color:var(--warn)">⚠ Let op: ' + escHtml(w.join('; ')) + '.</div>';
   el.innerHTML = html;
+
+  // Reisuren: toelichting bij het veld
+  const auto = urenUitTijden(o);
+  const urenEl = document.getElementById('of-uren');
+  if(urenEl) urenEl.placeholder = auto ? 'automatisch: ' + fmtN(auto.uren) : 'leeg = automatisch uit de tijden';
+  const autoEl = document.getElementById('of-uren-auto');
+  if(autoEl) {
+    const tekstUren = u => urenNaarTekst(u) + ' (' + fmtN(u) + ' uur)';
+    let t, kleur = 'var(--accent)';
+    if(r.urenBron === 'handmatig') {
+      t = 'Reisuren handmatig ingevuld: ' + tekstUren(parseFloat(o.uren) || 0) + '. De tijden worden niet gebruikt voor de uren.' + (auto ? ' Uit de tijden zou het ' + tekstUren(auto.uren) + ' zijn.' : '');
+      kleur = 'var(--text)';
+    } else if(auto) {
+      t = '✓ Reisuren automatisch: ' + tekstUren(auto.uren) + ' (terug ' + escHtml(o.ritTerug) + ' min vertrek ' + escHtml(o.ritVertrektijd) + (auto.overnacht ? ', terug na middernacht' : '') + ').';
+    } else if(Math.max(1, parseInt(o.dagen) || 1) > 1) {
+      t = 'Meerdere dagen: vul de reisuren zelf in.'; kleur = 'var(--warn)';
+    } else {
+      t = 'Vul vertrek garage en terug in garage in, of vul de reisuren zelf in.'; kleur = 'var(--warn)';
+    }
+    autoEl.style.color = kleur;
+    autoEl.textContent = t;
+  }
+
+  // Checklist: wat is er nog niet ingevuld?
+  const ont = document.getElementById('of-ontbreekt');
+  if(ont) {
+    const mis = offerteOntbreekt(o, r);
+    if(mis.length) {
+      ont.style.background = 'var(--warn-light)'; ont.style.color = 'var(--warn)';
+      ont.textContent = 'Nog niet ingevuld: ' + mis.join(', ') + '.';
+    } else {
+      ont.style.background = 'var(--accent-light)'; ont.style.color = 'var(--accent)';
+      ont.textContent = '✓ Alles ingevuld.';
+    }
+  }
+}
+
+// Lijst met dingen die nog ontbreken (alleen als hulp; opslaan blijft mogelijk).
+function offerteOntbreekt(o, r) {
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const leeg = v => String(v ?? '').trim() === '';
+  const mis = [];
+  if(!o.klantId && leeg(o.klantNaam)) mis.push('klant');
+  if(leeg(o.omschrijving)) mis.push('omschrijving');
+  if(leeg(o.ritdatum)) mis.push('datum rit');
+  if(leeg(o.ritPersonen)) mis.push('aantal personen');
+  if(leeg(o.van)) mis.push('vertrek');
+  if(leeg(o.naar)) mis.push('bestemming');
+  if(!(num(o.km) > 0)) mis.push('kilometers');
+  if(leeg(o.ritVertrektijd)) mis.push('vertrek garage');
+  if(leeg(o.ritVoorstaan)) mis.push('voorstaan klant');
+  if(leeg(o.ritTerug)) mis.push('terug in garage');
+  if(!(r.uren > 0)) mis.push('reisuren');
+  if(!(num(o.huur) > 0) || !(num(o.kmtarief) > 0) || !(num(o.uurtarief) > 0)) mis.push('bus-tarieven');
+  if(leeg(o.ritVoertuig)) mis.push('touringcar/bus');
+  return mis;
 }
 
 function bewaarBusTarieven() {
@@ -3174,15 +3268,10 @@ async function berekenRoute() {
     if(j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error('geen route gevonden');
     const km = Math.round(j.routes[0].distance / 100) / 10;
     const uren = Math.round(j.routes[0].duration / 3600 * 100) / 100;
-    // Reisuren zijn altijd het totaal: retour en aantal dagen rekenen we hier eenmalig in.
-    const keerUren = document.getElementById('of-retour').checked ? 2 : 1;
-    const dagenUren = (document.getElementById('of-perdag').value === 'totaal') ? 1 : Math.max(1, parseFloat(document.getElementById('of-dagen').value) || 1);
-    const totaalUren = Math.round(uren * keerUren * dagenUren * 100) / 100;
+    // Alleen de kilometers worden ingevuld; de reisuren komen uit de tijden (of zelf invullen).
     document.getElementById('of-km').value = km;
-    document.getElementById('of-uren').value = totaalUren;
     offerteRekenLive();
-    toonSt('✓ Enkele rit: ' + fmtN(km) + ' km, ' + urenNaarTekst(uren) + ' (auto, zonder verkeer). Reisuren totaal: ' + urenNaarTekst(totaalUren) +
-           (keerUren * dagenUren > 1 ? ' (× ' + keerUren * dagenUren + ' voor retour/dagen; pas zo nodig aan). ' : '. ') + 'Gevonden: ' +
+    toonSt('✓ Enkele rit: ' + fmtN(km) + ' km (rijtijd auto zonder verkeer: ' + urenNaarTekst(uren) + ', alleen ter info). Gevonden: ' +
            coords.map(c => c.naam).join(' → ') + '. Controleer zo nodig in Google Maps.', 'var(--accent)');
   } catch(e) {
     toonSt('Kon de route niet berekenen: ' + (e.message || e) + '. Gebruik “Open in Google Maps” en vul de km zelf in.', 'var(--danger)');
@@ -3242,26 +3331,26 @@ function renderOffertes() {
     const statusSel = '<select onchange="zetOfferteStatus(\'' + o.id + '\',this.value)" style="font-size:12.5px;padding:0.2rem 0.4rem;border:1px solid var(--border-mid);border-radius:6px;background:var(--surface);font-family:inherit">' +
       ['open', 'geaccepteerd', 'afgewezen'].map(s => '<option value="' + s + '"' + (status === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
     const heeftRegel = o.regelId && regels.some(x => x.id === o.regelId);
-    return '<tr>' +
-      '<td class="mono" style="white-space:nowrap">' + escHtml(o.nummer) + '</td>' +
-      '<td style="white-space:nowrap">' + nlDatum(o.datum) + '</td>' +
-      '<td>' + escHtml(klantTxt) + '</td>' +
-      '<td>' + escHtml(o.omschrijving) + '</td>' +
-      '<td class="mono" style="text-align:right;white-space:nowrap">€ ' + fmt(r.totaal) + '</td>' +
-      '<td>' + statusSel + '</td>' +
-      '<td style="white-space:nowrap;text-align:right">' +
-        '<button class="btn btn-sm" onclick="openOfferteForm(\'' + o.id + '\')">Bewerk</button> ' +
-        '<button class="btn btn-sm" onclick="printOfferte(\'' + o.id + '\')">Print</button> ' +
-        '<button class="btn btn-sm" onclick="printRitstaat(\'' + o.id + '\')">Ritstaat</button> ' +
-        '<button class="btn btn-sm" onclick="dupliceerOfferte(\'' + o.id + '\')">Kopie</button> ' +
-        (heeftRegel ? '<span class="text-sm text-muted">✓ in Invoer</span> ' :
-          '<button class="btn btn-sm" onclick="offerteNaarRegel(\'' + o.id + '\')">→ Factuurregel</button> ') +
-        '<button class="btn btn-sm btn-danger" onclick="verwijderOfferte(\'' + o.id + '\')">✕</button>' +
-      '</td></tr>';
+    const knop = (tekst, fn, extra) => '<button class="btn btn-sm' + (extra || '') + '" onclick="' + fn + '(\'' + o.id + '\')">' + tekst + '</button>';
+    return '<div style="padding:0.95rem 0;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">' +
+        '<div style="min-width:0;flex:1 1 240px">' +
+          '<div class="text-sm text-muted"><span class="mono">' + escHtml(o.nummer) + '</span> · ' + nlDatum(o.datum) + (o.ritdatum ? ' · rit ' + nlDatum(o.ritdatum) : '') + '</div>' +
+          '<div style="font-weight:500;margin-top:2px;overflow-wrap:anywhere">' + escHtml(o.omschrijving) + '</div>' +
+          '<div class="text-sm text-muted" style="overflow-wrap:anywhere">' + escHtml(klantTxt) + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex:0 0 auto">' +
+          '<div class="mono" style="font-size:1.1rem;font-weight:500;white-space:nowrap">€ ' + fmt(r.totaal) + '</div>' +
+          '<div class="text-sm text-muted" style="margin-bottom:4px">incl. BTW</div>' + statusSel +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.7rem">' +
+        knop('Bewerk', 'openOfferteForm') + knop('Print offerte', 'printOfferte') + knop('Ritstaat', 'printRitstaat') + knop('Kopie', 'dupliceerOfferte') +
+        (heeftRegel ? '<span class="text-sm text-muted" style="align-self:center;padding:0 0.3rem">✓ in Invoer</span>' : knop('→ Factuurregel', 'offerteNaarRegel')) +
+        knop('✕', 'verwijderOfferte', ' btn-danger') +
+      '</div></div>';
   }).join('');
-  el.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>' +
-    '<th>Nr.</th><th>Datum</th><th>Klant</th><th>Omschrijving</th><th style="text-align:right">Totaal incl. BTW</th><th>Status</th><th></th>' +
-    '</tr></thead><tbody>' + rijen + '</tbody></table></div>';
+  el.innerHTML = rijen;
 }
 
 function zetOfferteStatus(id, status) {
@@ -3460,7 +3549,7 @@ function ritstaatPlanning(o) {
     if(i < stops.length - 1 || o.retour) rijen.push({ tekst: 'Vertrek ' + s, plan: '', pers: true });
   });
   if(o.retour) rijen.push({ tekst: 'Aankomst vertrekplaats', plan: '', pers: true });
-  rijen.push({ tekst: 'Einde garage', plan: '', pers: true });
+  rijen.push({ tekst: 'Einde garage', plan: o.ritTerug || '', pers: true });
   return rijen;
 }
 
@@ -3472,7 +3561,11 @@ function bouwRitstaatHTML(o) {
   const start = o.ritdatum || '';
   const eind = start ? plusDagen(start, dagen - 1) : '';
   const uitvoering = !start ? '' : (dagen > 1 ? datumLang(start) + ' t/m ' + datumLang(eind) : datumLang(start));
-  const adressen = String(o.ritAdressen || '').split('\n').map(s => s.trim()).filter(Boolean);
+  // Niets ingevuld? Dan neemt de ritstaat de gegevens uit de offerte over.
+  let adressen = String(o.ritAdressen || '').split('\n').map(s => s.trim()).filter(Boolean);
+  if(!adressen.length) adressen = [o.van, ...String(o.via || '').split(';'), o.naar].map(s => String(s || '').trim()).filter(Boolean);
+  const chauffeur = o.ritChauffeur || 'Gert Veldhuis';
+  const aard = o.ritAard || o.omschrijving || '';
 
   const lbl = 'padding:3px 10px 3px 0;color:#555;white-space:nowrap;vertical-align:top;font-size:9.5pt';
   const val = 'padding:3px 0;border-bottom:1px dotted #aaa;font-weight:600;min-height:14px';
@@ -3503,9 +3596,9 @@ function bouwRitstaatHTML(o) {
         veld('Datum uitvoering', uitvoering),
         veld('Opdrachtgever', klant),
         veld('Contactpersoon', contact),
-        veld('Chauffeur', o.ritChauffeur),
+        veld('Chauffeur', chauffeur),
         veld('Touringcar / bus', o.ritVoertuig),
-        veld('Aard van de reis', o.ritAard)
+        veld('Aard van de reis', aard)
       ]) + '</td>' +
       '<td style="width:50%;padding-left:18px">' + blok([
         veld('Vertrekdatum', datumLang(start)),
