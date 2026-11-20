@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://sis-it-mar-sync.gert-c5c.workers.dev; connect-src 'self' https://sis-it-mar-sync.gert-c5c.workers.dev https://api.anthropic.com https://calendarmcp.googleapis.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://sis-it-mar-sync.gert-c5c.workers.dev; connect-src 'self' https://sis-it-mar-sync.gert-c5c.workers.dev https://api.anthropic.com https://calendarmcp.googleapis.com https://nominatim.openstreetmap.org https://router.project-osrm.org;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sis it Mar — Facturatie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -402,6 +402,7 @@ tr:hover td { background: var(--bg); }
   <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
   <button class="nav-btn" onclick="showPage('invoer')">Invoer</button>
   <button class="nav-btn" onclick="showPage('facturen')">Facturen</button>
+  <button class="nav-btn" onclick="showPage('offerte')">Offertes</button>
   <button class="nav-btn" onclick="showPage('klanten')">Klanten</button>
   <button class="nav-btn" onclick="showPage('instellingen')">Instellingen</button>
   <div class="nav-spacer"></div>
@@ -613,6 +614,162 @@ tr:hover td { background: var(--bg); }
   </div>
   <div class="card">
     <div id="facturen-lijst"></div>
+  </div>
+</div>
+
+<!-- OFFERTES -->
+<div id="page-offerte" class="page">
+  <div class="flex gap-3 mb-2" style="align-items:baseline; justify-content:space-between">
+    <p class="section-title" style="margin:0">Offertes <span class="text-muted text-sm" style="font-weight:400">buswerkzaamheden</span></p>
+    <button class="btn btn-primary" onclick="openOfferteForm()">+ Nieuwe offerte</button>
+  </div>
+
+  <div class="card" id="of-form-card" style="display:none">
+    <div class="card-header">
+      <span class="card-title" id="of-form-titel">Nieuwe offerte</span>
+      <button class="btn btn-sm" onclick="sluitOfferteForm()">Annuleren</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Klant</label>
+        <select id="of-klant" onchange="offerteKlantWissel()"></select>
+      </div>
+      <div class="form-row" id="of-klantnaam-rij">
+        <label>Naam klant</label>
+        <input type="text" id="of-klantnaam" placeholder="Naam of organisatie">
+      </div>
+      <div class="form-row">
+        <label>Offertedatum</label>
+        <input type="date" id="of-datum">
+      </div>
+      <div class="form-row">
+        <label>Geldig (aantal dagen)</label>
+        <input type="number" id="of-geldig" min="1" step="1" value="30">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Omschrijving rit</label>
+      <input type="text" id="of-omschrijving" placeholder="bijv. Busrit Roodhuis – Dokkum en terug">
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Datum rit (optioneel)</label>
+        <input type="date" id="of-ritdatum">
+      </div>
+      <div class="form-row">
+        <label>Opmerking (optioneel)</label>
+        <input type="text" id="of-opmerking" placeholder="bijv. 46 personen">
+      </div>
+    </div>
+
+    <div style="margin:0.25rem 0 1.25rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p class="text-sm" style="font-weight:500;margin-bottom:0.6rem">Route</p>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Vertrek</label>
+          <input type="text" id="of-van" placeholder="adres of plaats">
+        </div>
+        <div class="form-row">
+          <label>Bestemming</label>
+          <input type="text" id="of-naar" placeholder="bijv. Dokkum">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Via (optioneel, meerdere plaatsen scheiden met ;)</label>
+        <input type="text" id="of-via" placeholder="bijv. Winsum; Oostmahorn">
+      </div>
+      <div class="flex gap-3" style="flex-wrap:wrap">
+        <button class="btn" id="of-route-btn" onclick="berekenRoute()">📍 Bereken km en reistijd</button>
+        <button class="btn" onclick="openGoogleMaps()">🗺 Open in Google Maps</button>
+      </div>
+      <div id="of-route-status" class="text-sm text-muted" style="margin-top:0.6rem;min-height:18px"></div>
+      <p class="text-sm text-muted" style="margin-top:0.4rem">De berekening gebruikt OpenStreetMap (personenauto, zonder verkeer) en kan een paar procent afwijken van Google Maps. Je kunt km en uren hieronder altijd zelf overschrijven.</p>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Aantal dagen bus</label>
+        <input type="number" id="of-dagen" min="1" step="1" value="1" oninput="offerteRekenLive()">
+      </div>
+      <div class="form-row">
+        <label>Km en reisuren gelden</label>
+        <select id="of-perdag" onchange="offerteRekenLive()">
+          <option value="dag">per dag (× aantal dagen)</option>
+          <option value="totaal">voor de hele rit (niet × dagen)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Kilometers (zoals de route ze toont)</label>
+        <input type="number" id="of-km" min="0" step="0.1" oninput="offerteRekenLive()">
+      </div>
+      <div class="form-row">
+        <label>Reisuren (zoals de route ze toont)</label>
+        <input type="number" id="of-uren" min="0" step="0.05" oninput="offerteRekenLive()">
+      </div>
+    </div>
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text)">
+        <input type="checkbox" id="of-retour" onchange="offerteRekenLive()" style="width:auto">
+        Retour: dezelfde route ook terug rijden (km en reisuren × 2)
+      </label>
+    </div>
+
+    <div style="margin:0.25rem 0 1.25rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
+      <p class="text-sm" style="font-weight:500;margin-bottom:0.6rem">Bus-tarieven (excl. BTW)</p>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Huur bus per dag (€)</label>
+          <input type="number" id="of-huur" min="0" step="0.01" oninput="offerteRekenLive()">
+        </div>
+        <div class="form-row">
+          <label>Prijs per km (€)</label>
+          <input type="number" id="of-kmtarief" min="0" step="0.01" oninput="offerteRekenLive()">
+        </div>
+        <div class="form-row">
+          <label>Prijs per reisuur (€)</label>
+          <input type="number" id="of-uurtarief" min="0" step="0.01" oninput="offerteRekenLive()">
+        </div>
+        <div class="form-row">
+          <label>Opslag reistijd bus t.o.v. auto (%)</label>
+          <input type="number" id="of-opslag" min="0" step="1" value="0" oninput="offerteRekenLive()">
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="bewaarBusTarieven()">Bewaar als standaard voor nieuwe offertes</button>
+    </div>
+
+    <p class="text-sm" style="font-weight:500;margin-bottom:0.5rem">Extra kosten (tol, parkeren, …)</p>
+    <div id="of-extra"></div>
+    <button class="btn btn-sm" onclick="offerteExtraToevoegen()">+ Extra post</button>
+
+    <div class="form-grid" style="margin-top:1.25rem">
+      <div class="form-row">
+        <label>BTW</label>
+        <select id="of-btw" onchange="offerteRekenLive()">
+          <option value="9">9%</option>
+          <option value="21">21%</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Op de offerte tonen</label>
+        <select id="of-spec">
+          <option value="1">Alle regels (huur, km, reisuren)</option>
+          <option value="0">Alleen het totaalbedrag</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="of-resultaat" style="margin:0.5rem 0 1rem;padding:1rem 1.25rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);background:var(--accent-light)"></div>
+
+    <div class="flex gap-3" style="flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="slaOfferteOp(false)">Opslaan</button>
+      <button class="btn" onclick="slaOfferteOp(true)">Opslaan en afdrukken</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="offertes-lijst"></div>
   </div>
 </div>
 
@@ -863,6 +1020,7 @@ let klanten = [];
 let regels = [];
 let facturen = [];
 let instellingen = {};
+let offertes = [];
 let fileHandle = null;
 let backupDirHandle = null;
 let saveTimeout = null;
@@ -1049,13 +1207,14 @@ async function schrijfNaarBestand() {
       const perm = await fileHandle.requestPermission({ mode: 'readwrite' });
       if(perm !== 'granted') return;
       const writable = await fileHandle.createWritable();
-      const data = { klanten, regels, facturen, instellingen, _opgeslagen: new Date().toISOString() };
+      const data = { klanten, regels, facturen, instellingen, offertes, _opgeslagen: new Date().toISOString() };
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
       localStorage.setItem('sim_klanten', JSON.stringify(klanten));
       localStorage.setItem('sim_regels', JSON.stringify(regels));
       localStorage.setItem('sim_facturen', JSON.stringify(facturen));
       localStorage.setItem('sim_instellingen', JSON.stringify(instellingen));
+      localStorage.setItem('sim_offertes', JSON.stringify(offertes));
     } catch(e) { console.warn('Schrijffout:', e); }
   }, 600);
 }
@@ -1090,6 +1249,7 @@ async function nieuwBestand() {
     klanten = DEFAULTS.klanten;
     regels = [];
     facturen = [];
+    offertes = [];
     instellingen = { ...DEFAULTS.instellingen };
     await schrijfNaarBestand();
     document.getElementById('welkom-scherm').style.display = 'none';
@@ -1105,6 +1265,7 @@ function verwerkData(data) {
   if(data.klanten) klanten = data.klanten;
   if(data.regels) regels = data.regels;
   if(data.facturen) facturen = data.facturen;
+  if(data.offertes) offertes = data.offertes;
   if(data.instellingen) instellingen = data.instellingen;
   else instellingen = { ...DEFAULTS.instellingen };
   verwerkStartup();
@@ -1112,6 +1273,7 @@ function verwerkData(data) {
 
 function laad() {
   klanten = JSON.parse(localStorage.getItem('sim_klanten') || 'null') || DEFAULTS.klanten;
+  try { offertes = JSON.parse(localStorage.getItem('sim_offertes') || '[]') || []; } catch(e) { offertes = []; }
   const opgeslagenRegels = localStorage.getItem('sim_regels');
   if(opgeslagenRegels) {
     regels = JSON.parse(opgeslagenRegels);
@@ -1350,6 +1512,7 @@ function sla() {
   localStorage.setItem('sim_regels', JSON.stringify(regels));
   localStorage.setItem('sim_facturen', JSON.stringify(facturen));
   localStorage.setItem('sim_instellingen', JSON.stringify(instellingen));
+  localStorage.setItem('sim_offertes', JSON.stringify(offertes));
   schrijfNaarBestand();
   syncNaarCloud();
 }
@@ -1358,7 +1521,7 @@ function syncNaarCloud() {
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     try {
-      const data = JSON.stringify({ klanten, regels, facturen, instellingen });
+      const data = JSON.stringify({ klanten, regels, facturen, instellingen, offertes });
       const resp = await fetch(WORKER_URL + '/data', {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -1388,7 +1551,7 @@ async function cloudDagBackup() {
   const vandaag = new Date().toISOString().split('T')[0];
   if(localStorage.getItem('sim_cloud_backup_dag') === vandaag) return;
   try {
-    const data = JSON.stringify({ klanten, regels, facturen, instellingen, _backup: new Date().toISOString() });
+    const data = JSON.stringify({ klanten, regels, facturen, instellingen, offertes, _backup: new Date().toISOString() });
     const resp = await fetch(WORKER_URL + '/backup?datum=' + vandaag, {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -1417,6 +1580,7 @@ function renderPage(name) {
   if(name === 'dashboard') renderDashboard();
   if(name === 'invoer') renderInvoer();
   if(name === 'facturen') renderFacturen();
+  if(name === 'offerte') renderOffertes();
   if(name === 'klanten') renderKlanten();
   if(name === 'instellingen') renderInstellingen();
 }
@@ -2709,7 +2873,7 @@ function slaInstellingenOp() {
 // EXPORT / IMPORT
 // ════════════════════════════════════════════════
 function exportData() {
-  const data = JSON.stringify({ klanten, regels, facturen, instellingen }, null, 2);
+  const data = JSON.stringify({ klanten, regels, facturen, instellingen, offertes }, null, 2);
   const blob = new Blob([data], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2727,6 +2891,7 @@ function importData(input) {
       if(d.klanten) klanten = d.klanten;
       if(d.regels) regels = d.regels;
       if(d.facturen) facturen = d.facturen;
+      if(d.offertes) offertes = d.offertes;
       if(d.instellingen) instellingen = d.instellingen;
       sla();
       renderPage(document.querySelector('.page.active')?.id.replace('page-',''));
@@ -2734,6 +2899,511 @@ function importData(input) {
     } catch(err) { alert('Fout bij importeren: '+err.message); }
   };
   reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════
+// OFFERTES (buswerkzaamheden)
+// ════════════════════════════════════════════════
+// Een offerte bewaart de ingevoerde waarden (km, uren, tarieven, ...). Alle bedragen
+// worden daaruit berekend door berekenOfferte(): dezelfde invoer geeft altijd hetzelfde
+// resultaat, ook als de standaard bus-tarieven later veranderen.
+let _editOfferteId = null;
+let _ofExtra = [];
+const _geoCache = {};
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtN(n) { return (Math.round(n*100)/100).toLocaleString('nl-NL',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+
+function vandaagISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function plusDagen(iso, n) {
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d+n);
+  return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+}
+
+function urenNaarTekst(u) {
+  const m = Math.round(u*60);
+  return Math.floor(m/60) + 'u ' + String(m%60).padStart(2,'0') + 'min';
+}
+
+function busTarieven() {
+  const b = instellingen.bus || {};
+  return { huur: b.huur||0, kmtarief: b.kmtarief||0, uurtarief: b.uurtarief||0, opslag: b.opslag||0, btw: (b.btw !== undefined ? b.btw : 9) };
+}
+
+function standplaatsAdres() {
+  return ((instellingen.adres||'') + ', ' + (instellingen.pc||'')).replace(/\s+/g,' ').trim().replace(/^,\s*|,\s*$/g,'');
+}
+
+// ── Berekening ──
+// dagen x huur  +  km x kmtarief  +  reisuren x uurtarief  +  extra posten.
+// 'retour' verdubbelt km en reisuren. 'perDag' = km/uren gelden per dag (x aantal dagen).
+// De opslag voor reistijd (bus is trager dan een auto) werkt alleen op de reisuren.
+function berekenOfferte(o) {
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const dagen = Math.max(0, num(o.dagen));
+  const keer = o.retour ? 2 : 1;
+  const mult = (o.perDag === 'totaal') ? 1 : dagen;
+  const km = round2(num(o.km) * keer * mult);
+  const uren = round2(num(o.uren) * keer * (1 + num(o.opslag)/100) * mult);
+
+  const lijnen = [
+    { soort:'huur',  omschrijving:'Huur bus',       aantal:dagen, eenheid: dagen === 1 ? 'dag' : 'dagen', bedrag:num(o.huur),     subtotaal:round2(dagen * num(o.huur)) },
+    { soort:'km',    omschrijving:'Reiskilometers', aantal:km,    eenheid:'km',                          bedrag:num(o.kmtarief),  subtotaal:round2(km * num(o.kmtarief)) },
+    { soort:'uren',  omschrijving:'Reisuren',       aantal:uren,  eenheid:'uur',                         bedrag:num(o.uurtarief), subtotaal:round2(uren * num(o.uurtarief)) }
+  ];
+  (o.extra || []).forEach(e => {
+    const b = num(e.bedrag);
+    if(e.omschrijving || b) lijnen.push({ soort:'extra', omschrijving:e.omschrijving || 'Extra kosten', aantal:1, eenheid:'', bedrag:b, subtotaal:round2(b) });
+  });
+
+  const subtotaal = round2(lijnen.reduce((s,l) => s + l.subtotaal, 0));
+  const btwPct = (o.btw === undefined || o.btw === null || o.btw === '') ? 9 : num(o.btw);
+  const btwBedrag = round2(subtotaal * btwPct / 100);
+  return { lijnen, subtotaal, btwPct, btwBedrag, totaal: round2(subtotaal + btwBedrag), km, uren };
+}
+
+function offerteWaarschuwingen(o, r) {
+  const w = [];
+  r.lijnen.forEach(l => {
+    if(l.aantal > 0 && l.bedrag === 0) {
+      if(l.soort === 'huur') w.push('de huurprijs per dag is niet ingevuld');
+      if(l.soort === 'km') w.push('de prijs per km is niet ingevuld');
+      if(l.soort === 'uren') w.push('de prijs per reisuur is niet ingevuld');
+    }
+  });
+  if(!(parseFloat(o.dagen) > 0)) w.push('het aantal dagen is 0');
+  if(!w.length && r.totaal <= 0) w.push('het totaalbedrag is € 0');
+  return w;
+}
+
+// ── Formulier ──
+function leesOfferteForm() {
+  const v = id => (document.getElementById(id)?.value ?? '');
+  return {
+    klantId: v('of-klant'), klantNaam: v('of-klantnaam').trim(),
+    datum: v('of-datum'), geldig: parseInt(v('of-geldig')) || 30,
+    omschrijving: v('of-omschrijving').trim(), ritdatum: v('of-ritdatum'), opmerking: v('of-opmerking').trim(),
+    van: v('of-van').trim(), via: v('of-via').trim(), naar: v('of-naar').trim(),
+    dagen: v('of-dagen'), perDag: v('of-perdag'), km: v('of-km'), uren: v('of-uren'),
+    retour: !!document.getElementById('of-retour')?.checked,
+    huur: v('of-huur'), kmtarief: v('of-kmtarief'), uurtarief: v('of-uurtarief'), opslag: v('of-opslag'),
+    extra: _ofExtra.map(e => ({ omschrijving: e.omschrijving, bedrag: e.bedrag })),
+    btw: v('of-btw'), spec: v('of-spec') !== '0'
+  };
+}
+
+function openOfferteForm(id) {
+  _editOfferteId = id || null;
+  const o = id ? offertes.find(x => x.id === id) : null;
+  const t = busTarieven();
+  const sel = document.getElementById('of-klant');
+  sel.innerHTML = '<option value="">— andere klant (naam invullen) —</option>' +
+    klanten.map(k => '<option value="' + escHtml(k.id) + '">' + escHtml(k.naam) + '</option>').join('');
+  const set = (i, val) => { const e = document.getElementById(i); if(e) e.value = val; };
+
+  document.getElementById('of-form-titel').textContent = o ? 'Offerte ' + o.nummer + ' bewerken' : 'Nieuwe offerte';
+  set('of-klant', o?.klantId || ''); set('of-klantnaam', o?.klantNaam || '');
+  set('of-datum', o?.datum || vandaagISO()); set('of-geldig', o?.geldig || 30);
+  set('of-omschrijving', o?.omschrijving || ''); set('of-ritdatum', o?.ritdatum || ''); set('of-opmerking', o?.opmerking || '');
+  set('of-van', o ? (o.van || '') : standplaatsAdres()); set('of-via', o?.via || ''); set('of-naar', o?.naar || '');
+  set('of-dagen', o ? (o.dagen ?? 1) : 1); set('of-perdag', o?.perDag || 'dag');
+  set('of-km', o?.km ?? ''); set('of-uren', o?.uren ?? '');
+  document.getElementById('of-retour').checked = !!o?.retour;
+  set('of-huur', o ? (o.huur ?? '') : (t.huur || ''));
+  set('of-kmtarief', o ? (o.kmtarief ?? '') : (t.kmtarief || ''));
+  set('of-uurtarief', o ? (o.uurtarief ?? '') : (t.uurtarief || ''));
+  set('of-opslag', o ? (o.opslag ?? 0) : (t.opslag || 0));
+  set('of-btw', String(o ? o.btw : t.btw));
+  set('of-spec', (o && o.spec === false) ? '0' : '1');
+  _ofExtra = (o?.extra || []).map(e => ({ omschrijving: e.omschrijving || '', bedrag: e.bedrag }));
+
+  const st = document.getElementById('of-route-status');
+  if(st) st.textContent = '';
+  renderOfExtra();
+  offerteKlantWissel();
+  offerteRekenLive();
+  const card = document.getElementById('of-form-card');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function sluitOfferteForm() {
+  _editOfferteId = null;
+  document.getElementById('of-form-card').style.display = 'none';
+}
+
+function offerteKlantWissel() {
+  const rij = document.getElementById('of-klantnaam-rij');
+  if(rij) rij.style.display = document.getElementById('of-klant').value ? 'none' : '';
+}
+
+function offerteExtraToevoegen() { _ofExtra.push({ omschrijving: '', bedrag: '' }); renderOfExtra(); }
+function offerteExtraVerwijder(i) { _ofExtra.splice(i, 1); renderOfExtra(); offerteRekenLive(); }
+function offerteExtraWijzig(i, veld, waarde) { if(_ofExtra[i]) _ofExtra[i][veld] = waarde; offerteRekenLive(); }
+
+function renderOfExtra() {
+  const el = document.getElementById('of-extra');
+  if(!el) return;
+  el.innerHTML = _ofExtra.map((e, i) =>
+    '<div class="flex gap-3" style="margin-bottom:0.5rem">' +
+      '<input type="text" placeholder="Omschrijving (bijv. tol)" value="' + escHtml(e.omschrijving) + '" ' +
+        'oninput="offerteExtraWijzig(' + i + ',\'omschrijving\',this.value)" ' +
+        'style="flex:2;padding:0.5rem 0.75rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);font:inherit;font-size:14.5px">' +
+      '<input type="number" step="0.01" min="0" placeholder="€ bedrag" value="' + escHtml(e.bedrag) + '" ' +
+        'oninput="offerteExtraWijzig(' + i + ',\'bedrag\',this.value)" ' +
+        'style="flex:1;padding:0.5rem 0.75rem;border:1px solid var(--border-mid);border-radius:var(--radius-sm);font:inherit;font-size:14.5px">' +
+      '<button class="btn btn-sm btn-danger" onclick="offerteExtraVerwijder(' + i + ')">✕</button>' +
+    '</div>'
+  ).join('');
+}
+
+function offerteRekenLive() {
+  const el = document.getElementById('of-resultaat');
+  if(!el) return;
+  const o = leesOfferteForm();
+  const r = berekenOfferte(o);
+  const w = offerteWaarschuwingen(o, r);
+  const rij = (txt, bedrag, vet) =>
+    '<tr><td style="border:none;padding:3px 0;' + (vet ? 'font-weight:600;font-size:15px' : '') + '">' + txt + '</td>' +
+    '<td style="border:none;padding:3px 0;text-align:right;white-space:nowrap;' + (vet ? 'font-weight:600;font-size:15px' : '') + '">€ ' + fmt(bedrag) + '</td></tr>';
+  let html = '<table style="font-size:14px">';
+  r.lijnen.forEach(l => {
+    const reken = l.soort === 'extra' ? '' : ' <span class="text-muted">— ' + fmtN(l.aantal) + ' ' + l.eenheid + ' × € ' + fmt(l.bedrag) + '</span>';
+    html += rij(escHtml(l.omschrijving) + reken, l.subtotaal);
+  });
+  html += '<tr><td colspan="2" style="border:none;padding:4px 0"><div style="border-top:1px solid var(--border-mid)"></div></td></tr>';
+  html += rij('Subtotaal', r.subtotaal);
+  html += rij('BTW ' + fmtN(r.btwPct) + '%', r.btwBedrag);
+  html += rij('Totaal incl. BTW', r.totaal, true);
+  html += '</table>';
+  if(w.length) html += '<div style="margin-top:0.6rem;font-size:13px;color:var(--warn)">⚠ Let op: ' + escHtml(w.join('; ')) + '.</div>';
+  el.innerHTML = html;
+}
+
+function bewaarBusTarieven() {
+  const n = id => parseFloat(document.getElementById(id)?.value) || 0;
+  instellingen.bus = Object.assign({}, instellingen.bus, {
+    huur: n('of-huur'), kmtarief: n('of-kmtarief'), uurtarief: n('of-uurtarief'),
+    opslag: n('of-opslag'), btw: parseFloat(document.getElementById('of-btw').value) || 9
+  });
+  sla();
+  toast('✓ Bus-tarieven bewaard als standaard');
+}
+
+// ── Route: km en reistijd ──
+function routePunten() {
+  const g = id => (document.getElementById(id)?.value || '').trim();
+  return { van: g('of-van'), via: g('of-via').split(';').map(s => s.trim()).filter(Boolean), naar: g('of-naar') };
+}
+
+function openGoogleMaps() {
+  const p = routePunten();
+  if(!p.van || !p.naar) return toast('⚠ Vul vertrek en bestemming in');
+  let u = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + encodeURIComponent(p.van) +
+          '&destination=' + encodeURIComponent(p.naar);
+  if(p.via.length) u += '&waypoints=' + encodeURIComponent(p.via.join('|'));
+  window.open(u, '_blank');
+}
+
+async function geocodeAdres(q) {
+  if(_geoCache[q]) return _geoCache[q];
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=nl&countrycodes=nl,de,be&q=' + encodeURIComponent(q);
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('adres opzoeken mislukt (status ' + resp.status + ')');
+  const lijst = await resp.json();
+  if(!lijst.length) throw new Error('"' + q + '" niet gevonden');
+  const hit = lijst[0];
+  _geoCache[q] = { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), naam: String(hit.display_name || q).split(',').slice(0, 3).join(',').trim() };
+  return _geoCache[q];
+}
+
+async function berekenRoute() {
+  const p = routePunten();
+  const st = document.getElementById('of-route-status');
+  const btn = document.getElementById('of-route-btn');
+  const toonSt = (txt, kleur) => { st.style.color = kleur || 'var(--muted)'; st.textContent = txt; };
+  if(!p.van || !p.naar) return toonSt('Vul vertrek en bestemming in.', 'var(--danger)');
+  btn.disabled = true;
+  toonSt('Adressen opzoeken…');
+  try {
+    const namen = [p.van, ...p.via, p.naar];
+    const coords = [];
+    for(let i = 0; i < namen.length; i++) {
+      const bekend = !!_geoCache[namen[i]];
+      coords.push(await geocodeAdres(namen[i]));
+      // Nominatim vraagt maximaal 1 verzoek per seconde
+      if(!bekend && i < namen.length - 1) await new Promise(res => setTimeout(res, 1100));
+    }
+    toonSt('Route berekenen…');
+    const url = 'https://router.project-osrm.org/route/v1/driving/' + coords.map(c => c.lon + ',' + c.lat).join(';') + '?overview=false';
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('route berekenen mislukt (status ' + resp.status + ')');
+    const j = await resp.json();
+    if(j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error('geen route gevonden');
+    const km = Math.round(j.routes[0].distance / 100) / 10;
+    const uren = Math.round(j.routes[0].duration / 3600 * 100) / 100;
+    document.getElementById('of-km').value = km;
+    document.getElementById('of-uren').value = uren;
+    offerteRekenLive();
+    toonSt('✓ ' + fmtN(km) + ' km, ' + urenNaarTekst(uren) + ' (auto, zonder verkeer). Gevonden: ' +
+           coords.map(c => c.naam).join(' → ') + '. Controleer zo nodig in Google Maps.', 'var(--accent)');
+  } catch(e) {
+    toonSt('Kon de route niet berekenen: ' + (e.message || e) + '. Gebruik “Open in Google Maps” en vul de km zelf in.', 'var(--danger)');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Opslaan / lijst ──
+function volgendOfferteNummer(datum) {
+  const j = (datum || vandaagISO()).slice(0, 4);
+  const prefix = 'OF' + j;
+  const max = offertes
+    .filter(x => String(x.nummer).startsWith(prefix))
+    .reduce((m, x) => Math.max(m, parseInt(String(x.nummer).slice(prefix.length)) || 0), 0);
+  return prefix + String(max + 1).padStart(3, '0');
+}
+
+function slaOfferteOp(printNa) {
+  const o = leesOfferteForm();
+  const klant = klanten.find(k => k.id === o.klantId);
+  if(!klant && !o.klantNaam) return alert('Kies een klant of vul een naam in.');
+  if(!o.omschrijving) return alert('Vul een omschrijving van de rit in.');
+  if(!o.datum) o.datum = vandaagISO();
+  const r = berekenOfferte(o);
+  const w = offerteWaarschuwingen(o, r);
+  if(w.length && !confirm('Let op:\n- ' + w.join('\n- ') + '\n\nToch opslaan?')) return;
+
+  let rec;
+  if(_editOfferteId && (rec = offertes.find(x => x.id === _editOfferteId))) {
+    Object.assign(rec, o);
+  } else {
+    rec = Object.assign({ id: uid(), nummer: volgendOfferteNummer(o.datum), status: 'open', aangemaakt: new Date().toISOString() }, o);
+    offertes.push(rec);
+  }
+  rec.subtotaal = r.subtotaal; rec.btwBedrag = r.btwBedrag; rec.totaal = r.totaal;
+  sla();
+  sluitOfferteForm();
+  renderOffertes();
+  toast('✓ Offerte ' + rec.nummer + ' opgeslagen');
+  if(printNa) printOfferte(rec.id);
+}
+
+function renderOffertes() {
+  const el = document.getElementById('offertes-lijst');
+  if(!el) return;
+  if(!offertes.length) {
+    el.innerHTML = '<p class="text-sm text-muted">Nog geen offertes. Klik op “+ Nieuwe offerte”.</p>';
+    return;
+  }
+  const lijst = [...offertes].sort((a, b) => (b.datum || '').localeCompare(a.datum || '') || String(b.nummer).localeCompare(String(a.nummer)));
+  const rijen = lijst.map(o => {
+    const r = berekenOfferte(o);
+    const k = klanten.find(x => x.id === o.klantId);
+    const klantTxt = k ? k.naam : (o.klantNaam || '');
+    const status = o.status || 'open';
+    const statusSel = '<select onchange="zetOfferteStatus(\'' + o.id + '\',this.value)" style="font-size:12.5px;padding:0.2rem 0.4rem;border:1px solid var(--border-mid);border-radius:6px;background:var(--surface);font-family:inherit">' +
+      ['open', 'geaccepteerd', 'afgewezen'].map(s => '<option value="' + s + '"' + (status === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
+    const heeftRegel = o.regelId && regels.some(x => x.id === o.regelId);
+    return '<tr>' +
+      '<td class="mono" style="white-space:nowrap">' + escHtml(o.nummer) + '</td>' +
+      '<td style="white-space:nowrap">' + nlDatum(o.datum) + '</td>' +
+      '<td>' + escHtml(klantTxt) + '</td>' +
+      '<td>' + escHtml(o.omschrijving) + '</td>' +
+      '<td class="mono" style="text-align:right;white-space:nowrap">€ ' + fmt(r.totaal) + '</td>' +
+      '<td>' + statusSel + '</td>' +
+      '<td style="white-space:nowrap;text-align:right">' +
+        '<button class="btn btn-sm" onclick="openOfferteForm(\'' + o.id + '\')">Bewerk</button> ' +
+        '<button class="btn btn-sm" onclick="printOfferte(\'' + o.id + '\')">Print</button> ' +
+        '<button class="btn btn-sm" onclick="dupliceerOfferte(\'' + o.id + '\')">Kopie</button> ' +
+        (heeftRegel ? '<span class="text-sm text-muted">✓ in Invoer</span> ' :
+          '<button class="btn btn-sm" onclick="offerteNaarRegel(\'' + o.id + '\')">→ Factuurregel</button> ') +
+        '<button class="btn btn-sm btn-danger" onclick="verwijderOfferte(\'' + o.id + '\')">✕</button>' +
+      '</td></tr>';
+  }).join('');
+  el.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>' +
+    '<th>Nr.</th><th>Datum</th><th>Klant</th><th>Omschrijving</th><th style="text-align:right">Totaal incl. BTW</th><th>Status</th><th></th>' +
+    '</tr></thead><tbody>' + rijen + '</tbody></table></div>';
+}
+
+function zetOfferteStatus(id, status) {
+  const o = offertes.find(x => x.id === id);
+  if(!o) return;
+  o.status = status;
+  sla();
+}
+
+function dupliceerOfferte(id) {
+  const o = offertes.find(x => x.id === id);
+  if(!o) return;
+  const kopie = JSON.parse(JSON.stringify(o));
+  kopie.id = uid();
+  kopie.datum = vandaagISO();
+  kopie.nummer = volgendOfferteNummer(kopie.datum);
+  kopie.status = 'open';
+  kopie.aangemaakt = new Date().toISOString();
+  delete kopie.regelId;
+  offertes.push(kopie);
+  sla();
+  renderOffertes();
+  toast('✓ Kopie gemaakt: ' + kopie.nummer);
+}
+
+function verwijderOfferte(id) {
+  const o = offertes.find(x => x.id === id);
+  if(!o) return;
+  if(!confirm('Offerte ' + o.nummer + ' verwijderen?')) return;
+  offertes = offertes.filter(x => x.id !== id);
+  sla();
+  renderOffertes();
+}
+
+// Geaccepteerde offerte -> vrije post bij Invoer (eerst "Openstaande regels", daarna te factureren)
+function offerteNaarRegel(id) {
+  const o = offertes.find(x => x.id === id);
+  if(!o) return;
+  const k = klanten.find(x => x.id === o.klantId);
+  if(!k) return alert('Kies bij deze offerte eerst een klant uit je klantenlijst (Bewerk), dan kan hij naar een factuurregel.');
+  if(o.regelId && regels.some(x => x.id === o.regelId)) return alert('Van deze offerte is al een factuurregel gemaakt.');
+  const r = berekenOfferte(o);
+  if(!confirm('Factuurregel aanmaken voor ' + k.naam + '?\n\n' + o.omschrijving + '\n€ ' + fmt(r.subtotaal) + ' excl. BTW (' + fmtN(r.btwPct) + '%)')) return;
+  const regel = {
+    id: uid(), klantId: k.id, type: 'vrij', aangemaaktOp: new Date().toISOString(),
+    datum: o.ritdatum || '', omschrijving: o.omschrijving, bedrag: r.subtotaal, aantal: 1,
+    opmerking: o.opmerking || '', btw: r.btwPct
+  };
+  regels.push(regel);
+  o.regelId = regel.id;
+  o.status = 'geaccepteerd';
+  sla();
+  renderOffertes();
+  toast('✓ Factuurregel aangemaakt — te vinden onder Invoer / te factureren');
+}
+
+// ── Afdrukken (A4, zelfde stijl als de factuur) ──
+function bouwOfferteHTML(o) {
+  const k = klanten.find(x => x.id === o.klantId);
+  const ins = instellingen;
+  const insNaam = ins.naam || 'Sis it mar';
+  const insAdres = ins.adres || 'Thaborwei 25';
+  const insPc = ins.pc || '8632 WG  Tirns';
+  const insTel = ins.tel || '(+31) 6 53 299622';
+  const insIban = ins.iban || 'NL44 ABNA 0869 0257 75';
+  const insBtwnr = ins.btwnr || '110515407B02';
+  const insKvk = ins.kvk || '76971376';
+  const insEmail = ins.email || '';
+  const r = berekenOfferte(o);
+  const geldigTot = o.datum ? plusDagen(o.datum, parseInt(o.geldig) || 30) : '';
+  const klantTxt = k ? k.naam : (o.klantNaam || '');
+
+  const thS = 'padding:10px 8px;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-top:2.5px solid #1a1916;border-bottom:1.5px solid #bbb;white-space:nowrap;';
+  const tdS = 'padding:9px 8px;border-bottom:1px solid #ebe9e1;';
+  let rijen;
+  if(o.spec === false) {
+    rijen = '<tr><td style="' + tdS + '">' + escHtml(o.omschrijving) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">1</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td></tr>';
+  } else {
+    rijen = r.lijnen.filter(l => l.subtotaal !== 0).map((l, i) =>
+      '<tr style="background:' + (i % 2 ? '#faf9f6' : '#ffffff') + '">' +
+      '<td style="' + tdS + '">' + escHtml(l.omschrijving) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">' + fmtN(l.aantal) + (l.eenheid ? ' ' + l.eenheid : '') + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(l.bedrag) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(l.subtotaal) + '</td></tr>'
+    ).join('');
+  }
+
+  const betreftRegels = [];
+  if(o.ritdatum) betreftRegels.push('Datum rit: ' + nlDatum(o.ritdatum));
+  if(o.naar) betreftRegels.push('Route: ' + [o.van, ...String(o.via || '').split(';').map(s => s.trim()).filter(Boolean), o.naar].filter(Boolean).join(' – ') + (o.retour ? ' en terug' : ''));
+  if(parseFloat(o.dagen) > 1) betreftRegels.push('Aantal dagen: ' + fmtN(parseFloat(o.dagen)));
+  if(o.opmerking) betreftRegels.push(o.opmerking);
+
+  return '' +
+  '<table style="width:100%;border-collapse:collapse;margin-bottom:48px"><tr valign="top">' +
+    '<td style="width:50%">' +
+      '<div style="font-size:28pt;font-weight:800;color:#1a5c3a;letter-spacing:-1px;line-height:1">' + escHtml(insNaam) + '</div>' +
+      '<div style="font-size:9.5pt;color:#6b6860;margin-top:10px;line-height:1.8">' + escHtml(insAdres) + '<br>' + escHtml(insPc) + '<br>' + escHtml(insTel) + '</div>' +
+    '</td>' +
+    '<td style="text-align:right">' +
+      '<div style="font-size:30pt;font-weight:200;color:#1a1916;letter-spacing:-1px;line-height:1">Offerte</div>' +
+      '<table style="margin-left:auto;margin-top:12px;border-collapse:collapse;width:auto"><tbody>' +
+        '<tr><td style="color:#888;font-size:9pt;padding:2px 16px 2px 0;text-align:right;border:none">Offertenummer</td><td style="font-weight:600;font-size:10pt;border:none">' + escHtml(o.nummer) + '</td></tr>' +
+        '<tr><td style="color:#888;font-size:9pt;padding:2px 16px 2px 0;text-align:right;border:none">Datum</td><td style="font-size:10pt;border:none">' + nlDatum(o.datum) + '</td></tr>' +
+        '<tr><td style="color:#888;font-size:9pt;padding:2px 16px 2px 0;text-align:right;border:none">Geldig tot</td><td style="font-size:10pt;border:none">' + nlDatum(geldigTot) + '</td></tr>' +
+      '</tbody></table>' +
+    '</td>' +
+  '</tr></table>' +
+
+  '<div style="margin-bottom:30px">' +
+    '<div style="font-size:8pt;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Offerte voor</div>' +
+    '<div style="font-weight:700;font-size:11.5pt">' + escHtml(klantTxt) + '</div>' +
+    (k?.contact ? '<div style="font-size:10pt;color:#555;margin-top:2px">t.a.v. ' + escHtml(k.contact) + '</div>' : '') +
+    (k?.straat ? '<div style="font-size:10pt;color:#555">' + escHtml(k.straat) + '</div>' : '') +
+    (k?.pc ? '<div style="font-size:10pt;color:#555">' + escHtml(k.pc) + '</div>' : '') +
+  '</div>' +
+
+  '<div style="margin-bottom:30px">' +
+    '<div style="font-size:8pt;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Betreft</div>' +
+    '<div style="font-weight:700;font-size:11.5pt">' + escHtml(o.omschrijving) + '</div>' +
+    betreftRegels.map(t => '<div style="font-size:10pt;color:#555;margin-top:2px">' + escHtml(t) + '</div>').join('') +
+  '</div>' +
+
+  '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr style="background:#f4f3ef">' +
+      '<th style="text-align:left;width:55%;' + thS + '">Beschrijving</th>' +
+      '<th style="text-align:right;' + thS + '">Aantal</th>' +
+      '<th style="text-align:right;' + thS + '">Stukprijs</th>' +
+      '<th style="text-align:right;' + thS + '">Totaal</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rijen + '</tbody>' +
+    '<tfoot>' +
+      '<tr><td colspan="3" style="text-align:right;color:#666;padding:8px 8px 4px;font-size:10pt;border-top:1.5px solid #bbb;border-bottom:none">Subtotaal</td>' +
+        '<td style="text-align:right;padding:8px 8px 4px;font-size:10pt;border-top:1.5px solid #bbb;border-bottom:none;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td></tr>' +
+      '<tr><td colspan="3" style="text-align:right;color:#666;padding:4px 8px;border-bottom:none">BTW ' + fmtN(r.btwPct) + '%</td>' +
+        '<td style="text-align:right;padding:4px 8px;border-bottom:none;white-space:nowrap">€ ' + fmt(r.btwBedrag) + '</td></tr>' +
+      '<tr><td colspan="3" style="text-align:right;font-size:14pt;font-weight:800;padding:12px 8px;border-top:2.5px solid #1a1916;border-bottom:none;color:#1a1916">Totaal</td>' +
+        '<td style="text-align:right;font-size:14pt;font-weight:800;padding:12px 8px;border-top:2.5px solid #1a1916;border-bottom:none;white-space:nowrap">€ ' + fmt(r.totaal) + '</td></tr>' +
+    '</tfoot>' +
+  '</table>' +
+
+  '<div style="margin-top:28px;padding:14px 16px;background:#f4f7f5;border-left:3px solid #1a5c3a;border-radius:3px">' +
+    '<div style="font-size:10pt;color:#1a1916">Deze offerte is geldig tot <strong>' + nlDatum(geldigTot) + '</strong>. Het totaalbedrag van <strong>€ ' + fmt(r.totaal) + '</strong> is inclusief ' + fmtN(r.btwPct) + '% BTW.</div>' +
+    '<div style="font-size:10pt;color:#1a1916;margin-top:4px">Akkoord? Laat het ons weten' + (insEmail ? ' via ' + escHtml(insEmail) : '') + (insTel ? (insEmail ? ' of ' : ' via ') + escHtml(insTel) : '') + '.</div>' +
+  '</div>' +
+
+  '<div style="position:fixed;bottom:12mm;left:18mm;right:18mm;border-top:1px solid #ddd;padding-top:8px;font-size:8.5pt;color:#999;text-align:center">' +
+    escHtml(insNaam) + ' — IBAN ' + escHtml(insIban) + ' — BTW ' + escHtml(insBtwnr) + ' — KvK ' + escHtml(insKvk) +
+  '</div>';
+}
+
+function printOfferte(id) {
+  const o = offertes.find(x => x.id === id);
+  if(!o) return;
+  const k = klanten.find(x => x.id === o.klantId);
+  const klantKort = {'k1':'Van_der_Heide','k2':'Echtemensen','k3':'Holding','k4':'Lieneke','k5':'Freulesjongers'};
+  const klantDeel = klantKort[o.klantId] || (k?.naam || o.klantNaam || '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const naam = 'Offerte_' + o.nummer + (klantDeel ? '_' + klantDeel : '');
+  const html = bouwOfferteHTML(o);
+  const w = window.open('', '_blank', 'width=820,height=1100');
+  if(!w) return alert('De print-pagina werd geblokkeerd. Sta pop-ups toe voor deze site en probeer opnieuw.');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + naam + '</title>' +
+    '<style>' +
+    '@page{size:A4;margin:15mm 18mm}' +
+    'body{margin:0;padding:0;font-family:Arial,sans-serif;font-size:11pt;color:#1a1916;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'table{width:100%;border-collapse:collapse;font-size:11pt}' +
+    'div{max-width:100%}' +
+    '</style></head><body>' + html + '<scri' + 'pt>window.onload=function(){window.print();}</scri' + 'pt></body></html>');
+  w.document.close();
 }
 
 // ════════════════════════════════════════════════
