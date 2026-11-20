@@ -734,18 +734,18 @@ tr:hover td { background: var(--bg); }
           Retour: dezelfde route ook terug rijden (kilometers × 2)
         </label>
       </div>
-      <p class="text-sm" style="font-weight:500;margin:0.4rem 0 0.5rem">Bus-tarieven (excl. BTW)</p>
+      <p class="text-sm" style="font-weight:500;margin:0.4rem 0 0.5rem">Bus-tarieven (alle prijzen incl. BTW)</p>
       <div class="form-grid">
         <div class="form-row">
-          <label>Huur bus per dag (€)</label>
+          <label>Huur bus per dag (€ incl. BTW)</label>
           <input type="number" id="of-huur" min="0" step="0.01" oninput="offerteRekenLive()">
         </div>
         <div class="form-row">
-          <label>Prijs per km (€)</label>
+          <label>Prijs per km (€ incl. BTW)</label>
           <input type="number" id="of-kmtarief" min="0" step="0.01" oninput="offerteRekenLive()">
         </div>
         <div class="form-row">
-          <label>Prijs per reisuur (€)</label>
+          <label>Prijs per reisuur (€ incl. BTW)</label>
           <input type="number" id="of-uurtarief" min="0" step="0.01" oninput="offerteRekenLive()">
         </div>
         <div class="form-row">
@@ -755,7 +755,7 @@ tr:hover td { background: var(--bg); }
       </div>
       <button class="btn btn-sm" onclick="bewaarBusTarieven()">Bewaar tarieven als standaard voor nieuwe offertes</button>
 
-      <p class="text-sm" style="font-weight:500;margin:1rem 0 0.5rem">Extra kosten (tol, parkeren, …)</p>
+      <p class="text-sm" style="font-weight:500;margin:1rem 0 0.5rem">Extra kosten (tol, parkeren, …), bedrag incl. BTW</p>
       <div id="of-extra"></div>
       <button class="btn btn-sm" onclick="offerteExtraToevoegen()">+ Extra post</button>
 
@@ -763,8 +763,8 @@ tr:hover td { background: var(--bg); }
         <div class="form-row">
           <label>BTW</label>
           <select id="of-btw" onchange="offerteRekenLive()">
-            <option value="9">9%</option>
-            <option value="21">21%</option>
+            <option value="9">9% (zit in de prijzen)</option>
+            <option value="21">21% (zit in de prijzen)</option>
           </select>
         </div>
         <div class="form-row">
@@ -779,10 +779,10 @@ tr:hover td { background: var(--bg); }
 
     <div style="margin:0 0 1.1rem;padding:0.9rem 1rem;background:var(--bg);border-radius:var(--radius-sm)">
       <p style="font-weight:600;margin:0 0 0.2rem;font-size:14.5px">5 · Chauffeur en ritstaat</p>
-      <p class="text-sm text-muted" style="margin-bottom:0.7rem">Op de ritstaat staan geen prijzen. Datum, route, personen en tijden komen uit de offerte. Laat je hieronder iets leeg, dan wordt dit automatisch ingevuld: aard van de reis = omschrijving, adressen = vertrek, via en bestemming. Sla de offerte op en klik in de lijst op “Ritstaat”.</p>
+      <p class="text-sm text-muted" style="margin-bottom:0.7rem">Op de ritstaat staan geen prijzen. Datum, route, personen en tijden komen uit de offerte. Laat je hieronder iets leeg, dan wordt dit automatisch ingevuld: chauffeur = Gert Veldhuis, touringcar = Volvo touringcar, aard van de reis = omschrijving, adressen = vertrek, via en bestemming. Sla de offerte op en klik in de lijst op “Ritstaat”.</p>
       <div class="form-grid">
         <div class="form-row"><label>Chauffeur</label><input type="text" id="of-r-chauffeur" placeholder="leeg = Gert Veldhuis"></div>
-        <div class="form-row"><label>Touringcar / bus</label><input type="text" id="of-r-voertuig" placeholder="bijv. Volvo touringcar"></div>
+        <div class="form-row"><label>Touringcar / bus</label><input type="text" id="of-r-voertuig" placeholder="leeg = Volvo touringcar"></div>
         <div class="form-row"><label>Aard van de reis</label><input type="text" id="of-r-aard" placeholder="leeg = omschrijving van de rit"></div>
       </div>
       <div class="form-row">
@@ -3021,10 +3021,23 @@ function berekenOfferte(o) {
     if(e.omschrijving || b) lijnen.push({ soort:'extra', omschrijving:e.omschrijving || 'Extra kosten', aantal:1, eenheid:'', bedrag:b, subtotaal:round2(b) });
   });
 
-  const subtotaal = round2(lijnen.reduce((s,l) => s + l.subtotaal, 0));
+  // Alle ingevulde prijzen zijn INCLUSIEF BTW: het totaal is de som van de regels; de BTW wordt eruit gerekend.
+  const totaal = round2(lijnen.reduce((s,l) => s + l.subtotaal, 0));
   const btwPct = (o.btw === undefined || o.btw === null || o.btw === '') ? 9 : num(o.btw);
-  const btwBedrag = round2(subtotaal * btwPct / 100);
-  return { lijnen, subtotaal, btwPct, btwBedrag, totaal: round2(subtotaal + btwBedrag), km, uren, urenBron };
+  const sp = splitsInclBtw(totaal, btwPct);
+  return { lijnen, subtotaal: sp.excl, btwPct, btwBedrag: sp.btw, totaal, km, uren, urenBron };
+}
+
+// Splitst een bedrag inclusief BTW in excl. en BTW. Kiest (waar mogelijk) het excl.-bedrag waarmee de
+// factuurberekening (excl + afgerond excl x %) precies hetzelfde totaal geeft; excl + BTW is altijd het totaal.
+function splitsInclBtw(totaal, pct) {
+  const p = Math.max(0, pct);
+  const e = round2(totaal / (1 + p / 100));
+  for (const d of [0, -0.01, 0.01, -0.02, 0.02]) {
+    const c = round2(e + d);
+    if(round2(c + round2(c * p / 100)) === totaal) return { excl: c, btw: round2(totaal - c) };
+  }
+  return { excl: e, btw: round2(totaal - e) };
 }
 
 function offerteWaarschuwingen(o, r) {
@@ -3082,7 +3095,7 @@ function openOfferteForm(id) {
   set('of-opslag', o ? (o.opslag ?? 0) : (t.opslag || 0));
   set('of-btw', String(o ? o.btw : t.btw));
   set('of-spec', (o && o.spec === false) ? '0' : '1');
-  set('of-r-chauffeur', o ? (o.ritChauffeur || '') : 'Gert Veldhuis'); set('of-r-voertuig', o?.ritVoertuig || ''); set('of-r-personen', o?.ritPersonen ?? '');
+  set('of-r-chauffeur', o?.ritChauffeur || 'Gert Veldhuis'); set('of-r-voertuig', o?.ritVoertuig || 'Volvo touringcar'); set('of-r-personen', o?.ritPersonen ?? '');
   set('of-r-aard', o?.ritAard || ''); set('of-r-vertrektijd', o?.ritVertrektijd || ''); set('of-r-voorstaan', o?.ritVoorstaan || '');
   set('of-r-terug', o?.ritTerug || ''); set('of-r-adressen', o?.ritAdressen || '');
   _ofExtra = (o?.extra || []).map(e => ({ omschrijving: e.omschrijving || '', bedrag: e.bedrag }));
@@ -3142,7 +3155,7 @@ function offerteRekenLive() {
     html += rij(escHtml(l.omschrijving) + reken, l.subtotaal);
   });
   html += '<tr><td colspan="2" style="border:none;padding:4px 0"><div style="border-top:1px solid var(--border-mid)"></div></td></tr>';
-  html += rij('Subtotaal', r.subtotaal);
+  html += rij('Totaal excl. BTW', r.subtotaal);
   html += rij('BTW ' + fmtN(r.btwPct) + '%', r.btwBedrag);
   html += rij('Totaal incl. BTW', r.totaal, true);
   html += '</table>';
@@ -3202,7 +3215,6 @@ function offerteOntbreekt(o, r) {
   if(leeg(o.ritTerug)) mis.push('terug in garage');
   if(!(r.uren > 0)) mis.push('reisuren');
   if(!(num(o.huur) > 0) || !(num(o.kmtarief) > 0) || !(num(o.uurtarief) > 0)) mis.push('bus-tarieven');
-  if(leeg(o.ritVoertuig)) mis.push('touringcar/bus');
   return mis;
 }
 
@@ -3429,8 +3441,8 @@ function bouwOfferteHTML(o) {
   if(o.spec === false) {
     rijen = '<tr><td style="' + tdS + '">' + escHtml(o.omschrijving) + '</td>' +
       '<td style="' + tdS + 'text-align:right;white-space:nowrap">1</td>' +
-      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td>' +
-      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td></tr>';
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.totaal) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;white-space:nowrap">€ ' + fmt(r.totaal) + '</td></tr>';
   } else {
     rijen = r.lijnen.filter(l => l.subtotaal !== 0).map((l, i) =>
       '<tr style="background:' + (i % 2 ? '#faf9f6' : '#ffffff') + '">' +
@@ -3486,14 +3498,15 @@ function bouwOfferteHTML(o) {
     '</tr></thead>' +
     '<tbody>' + rijen + '</tbody>' +
     '<tfoot>' +
-      '<tr><td colspan="3" style="text-align:right;color:#666;padding:8px 8px 4px;font-size:10pt;border-top:1.5px solid #bbb;border-bottom:none">Subtotaal</td>' +
+      '<tr><td colspan="3" style="text-align:right;color:#666;padding:8px 8px 4px;font-size:10pt;border-top:1.5px solid #bbb;border-bottom:none">Totaal excl. BTW</td>' +
         '<td style="text-align:right;padding:8px 8px 4px;font-size:10pt;border-top:1.5px solid #bbb;border-bottom:none;white-space:nowrap">€ ' + fmt(r.subtotaal) + '</td></tr>' +
       '<tr><td colspan="3" style="text-align:right;color:#666;padding:4px 8px;border-bottom:none">BTW ' + fmtN(r.btwPct) + '%</td>' +
         '<td style="text-align:right;padding:4px 8px;border-bottom:none;white-space:nowrap">€ ' + fmt(r.btwBedrag) + '</td></tr>' +
-      '<tr><td colspan="3" style="text-align:right;font-size:14pt;font-weight:800;padding:12px 8px;border-top:2.5px solid #1a1916;border-bottom:none;color:#1a1916">Totaal</td>' +
+      '<tr><td colspan="3" style="text-align:right;font-size:14pt;font-weight:800;padding:12px 8px;border-top:2.5px solid #1a1916;border-bottom:none;color:#1a1916">Totaal incl. BTW</td>' +
         '<td style="text-align:right;font-size:14pt;font-weight:800;padding:12px 8px;border-top:2.5px solid #1a1916;border-bottom:none;white-space:nowrap">€ ' + fmt(r.totaal) + '</td></tr>' +
     '</tfoot>' +
   '</table>' +
+  '<div style="font-size:9pt;color:#777;margin-top:6px">Alle genoemde prijzen zijn inclusief ' + fmtN(r.btwPct) + '% BTW.</div>' +
 
   '<div style="margin-top:28px;padding:14px 16px;background:#f4f7f5;border-left:3px solid #1a5c3a;border-radius:3px">' +
     '<div style="font-size:10pt;color:#1a1916">Deze offerte is geldig tot <strong>' + nlDatum(geldigTot) + '</strong>. Het totaalbedrag van <strong>€ ' + fmt(r.totaal) + '</strong> is inclusief ' + fmtN(r.btwPct) + '% BTW.</div>' +
@@ -3597,7 +3610,7 @@ function bouwRitstaatHTML(o) {
         veld('Opdrachtgever', klant),
         veld('Contactpersoon', contact),
         veld('Chauffeur', chauffeur),
-        veld('Touringcar / bus', o.ritVoertuig),
+        veld('Touringcar / bus', o.ritVoertuig || 'Volvo touringcar'),
         veld('Aard van de reis', aard)
       ]) + '</td>' +
       '<td style="width:50%;padding-left:18px">' + blok([
